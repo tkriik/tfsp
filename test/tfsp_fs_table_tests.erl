@@ -7,10 +7,8 @@
 
 %% Sample entries
 
--define(ENTRY_A0, {tfsp_fs_entry, "A", 0 }).
--define(ENTRY_A1, {tfsp_fs_entry, "A", 1 }).
--define(ENTRY_B0, {tfsp_fs_entry, "B", 0 }).
--define(ENTRY_B1, {tfsp_fs_entry, "B", 1 }).
+-define(ENTRY_0, {tfsp_fs_entry, "A", 0 }).
+-define(ENTRY_1, {tfsp_fs_entry, "A", 1 }).
 
 
 %% Main test
@@ -41,25 +39,25 @@ cleanup(_) ->
 %% Tests
 
 insert_once() ->
-    ?assert(tfsp_fs_table:insert(?ENTRY_A0) =:= ok).
+    ?assert(tfsp_fs_table:insert(?ENTRY_0) =:= ok).
 
 insert_twice() ->
-    ?assert(tfsp_fs_table:insert(?ENTRY_A0) =:= ok),
-    ?assert(tfsp_fs_table:insert(?ENTRY_A1) =:= ok).
+    ?assert(tfsp_fs_table:insert(?ENTRY_0) =:= ok),
+    ?assert(tfsp_fs_table:insert(?ENTRY_1) =:= ok).
 
 find_nonexistent() ->
     ?assert(tfsp_fs_table:find("A") =:= none).
 
 find_new() ->
-    tfsp_fs_table:insert(?ENTRY_A0),
-    ?assertEqual(tfsp_fs_table:find("A"), {ok, ?ENTRY_A0}).
+    tfsp_fs_table:insert(?ENTRY_0),
+    ?assertEqual(tfsp_fs_table:find("A"), {ok, ?ENTRY_0}).
 
 find_updated() ->
-    tfsp_fs_table:insert(?ENTRY_A0),
-    tfsp_fs_table:insert(?ENTRY_A1),
-    ?assertEqual(tfsp_fs_table:find("A"), {ok, ?ENTRY_A1}).
+    tfsp_fs_table:insert(?ENTRY_0),
+    tfsp_fs_table:insert(?ENTRY_1),
+    ?assertEqual(tfsp_fs_table:find("A"), {ok, ?ENTRY_1}).
 
 find_removed() ->
-    tfsp_fs_table:insert(?ENTRY_A0),
+    tfsp_fs_table:insert(?ENTRY_0),
     tfsp_fs_table:remove("A"),
     ?assert(tfsp_fs_table:find("A") =:= none).

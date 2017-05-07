@@ -7,14 +7,14 @@
          remove/1,
          delete/0]).
 
--include("tfsp_fs_entry.hrl").
+-include("fs_entry.hrl").
 
 
 %% Specs
 
 -spec new() -> atom().
--spec insert(tfsp_fs_entry()) -> ok.
--spec find(file:path()) -> {ok, tfsp_fs_entry()} | none.
+-spec insert(fs_entry()) -> ok.
+-spec find(file:path()) -> {ok, fs_entry()} | none.
 -spec remove(file:path()) -> ok.
 -spec delete() -> ok.
 
@@ -26,7 +26,7 @@ new() ->
     ?MODULE = ets:new(?MODULE, [ordered_set,
                                 public,
                                 named_table,
-                                {keypos, #tfsp_fs_entry.path}]),
+                                {keypos, #fs_entry.path}]),
     ok.
 
 % Inserts or updates a file entry in the table.

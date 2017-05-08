@@ -28,5 +28,4 @@ build(Path) ->
 build(Path, FileInfo) ->
     #fs_entry{ path = Path,
                hash = <<>>,
-               crc = 0,
                file_info = FileInfo }.

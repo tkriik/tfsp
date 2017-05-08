@@ -23,15 +23,14 @@ module_test_() ->
 %% Tests
 
 small_file_build() ->
-    file_build(?SMALL_FILE, <<>>, 0, 1064).
+    file_build(?SMALL_FILE, <<>>, 1064).
 
 large_file_build() ->
-    file_build(?LARGE_FILE, <<>>, 0, 286889).
+    file_build(?LARGE_FILE, <<>>, 286889).
 
-file_build(Filename, Hash, Crc, Size) ->
+file_build(Filename, Hash, Size) ->
     Path = filename:join(?DATA_DIR, Filename),
     Entry = #fs_entry{ file_info = FileInfo } = tfsp_fs_entry:build(Path),
     ?assertEqual(Path, Entry#fs_entry.path),
     ?assertEqual(Hash, Entry#fs_entry.hash),
-    ?assertEqual(Crc, Entry#fs_entry.crc),
     ?assertEqual(Size, FileInfo#file_info.size).

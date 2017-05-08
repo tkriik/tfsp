@@ -16,10 +16,13 @@
 %% Specs
 
 -spec create() -> atom().
+-spec delete() -> ok.
+
 -spec insert(fs_entry()) -> ok.
 -spec find(file:path()) -> {ok, fs_entry()} | none.
 -spec remove(file:path()) -> ok.
--spec delete() -> ok.
+
+-spec count() -> non_neg_integer().
 
 
 %% API 

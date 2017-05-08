@@ -2,10 +2,13 @@
 
 -module(tfsp_fs_table).
 -export([new/0,
+         delete/0,
+
          insert/1,
          find/1,
          remove/1,
-         delete/0]).
+
+         count/0]).
 
 -include("fs_entry.hrl").
 
@@ -29,6 +32,11 @@ new() ->
                                 {keypos, #fs_entry.path}]),
     ok.
 
+% Deletes the table.
+delete() ->
+    true = ets:delete(?MODULE),
+    ok.
+
 % Inserts or updates a file entry in the table.
 insert(Entry) ->
     true = ets:insert(?MODULE, Entry),
@@ -45,7 +53,8 @@ remove(Path) ->
     true = ets:delete(?MODULE, Path),
     ok.
 
-% Deletes the table.
-delete() ->
-    true = ets:delete(?MODULE),
-    ok.
+% Returns the number of entries in the table.
+count() ->
+    InfoList = ets:info(?MODULE),
+    {size, Size} = proplists:lookup(size, ets:info(?MODULE)),
+    Size.

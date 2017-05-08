@@ -36,7 +36,7 @@ module_test_() ->
 %% Fixtures
 
 setup() ->
-    ok = tfsp_fs_table:new().
+    ok = tfsp_fs_table:create().
 
 cleanup(_) ->
     ok = tfsp_fs_table:delete().

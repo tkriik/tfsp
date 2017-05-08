@@ -1,7 +1,7 @@
 %%% Module for interfacing with the in-memory file system entry table.
 
 -module(tfsp_fs_table).
--export([new/0,
+-export([create/0,
          delete/0,
 
          insert/1,
@@ -15,7 +15,7 @@
 
 %% Specs
 
--spec new() -> atom().
+-spec create() -> atom().
 -spec insert(fs_entry()) -> ok.
 -spec find(file:path()) -> {ok, fs_entry()} | none.
 -spec remove(file:path()) -> ok.
@@ -25,7 +25,7 @@
 %% API 
 
 % Creates the table.
-new() ->
+create() ->
     ?MODULE = ets:new(?MODULE, [ordered_set,
                                 public,
                                 named_table,

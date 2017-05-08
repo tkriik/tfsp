@@ -22,36 +22,33 @@ module_test_() ->
      [{"with valid files",
        [{"small file", fun with_small_file/0},
         {"large file", fun with_large_file/0},
-        {"directory", fun with_directory/0}]},
+        {"directory", fun with_directory/0}
+       ]
+      },
       {"with invalid files",
        [{"symlink", fun with_symlink/0},
-        {"nonexistent", fun with_nonexistent/0}]}]}.
+        {"nonexistent", fun with_nonexistent/0}
+       ]
+      }
+     ]
+    }.
+
 
 %% Tests
 
 with_small_file() ->
-    with_file(filename:join(?DATA_DIR, ?SMALL_FILE),
-              <<>>,
-              1064,
-              regular,
-              read_write,
-              1494221667).
+    Path = filename:join(?DATA_DIR, ?SMALL_FILE),
+    set_mtime(Path, 1494221667),
+    with_file(Path, <<>>, 1064, regular, read_write, 1494221667).
 
 with_large_file() ->
-    with_file(filename:join(?DATA_DIR, ?LARGE_FILE),
-              <<>>,
-              286889,
-              regular,
-              read_write,
-              1494221667).
+    Path = filename:join(?DATA_DIR, ?LARGE_FILE),
+    set_mtime(Path, 1494221667),
+    with_file(Path, <<>>, 286889, regular, read_write, 1494221667).
 
 with_directory() ->
-    with_file(?DATA_DIR,
-              <<>>,
-              0,
-              directory,
-              read_write,
-              1494224373).
+    set_mtime(?DATA_DIR, 1494221667),
+    with_file(?DATA_DIR, <<>>, 0, directory, read_write, 1494221667).
 
 with_symlink() ->
     with_error(filename:join(?DATA_DIR, ?SYMLINK_FILE), {invalid_type, symlink}).
@@ -74,3 +71,7 @@ with_error(Path, Reason) ->
     Result = tfsp_fs_entry:build(Path),
     ?assertMatch({error, _}, Result),
     ?assertEqual(element(2, Result), Reason).
+
+set_mtime(Path, Mtime) ->
+    FileInfo = #file_info{ mtime = Mtime },
+    ok = file:write_file_info(Path, FileInfo, [{time, posix}]).

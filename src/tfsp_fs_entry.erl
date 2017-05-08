@@ -29,7 +29,7 @@ build(Path, #file_info{ size = Size,
                         type = Type,
                         access = Access,
                         mtime = Mtime }) ->
-	case Type of
+    case Type of
         regular -> build_regular_entry(Path, Size, Access, Mtime);
         directory -> build_directory_entry(Path, Access, Mtime);
         _ -> {error, {invalid_type, Type}}

@@ -18,14 +18,20 @@
 % Builds a new file system entry from the file/directory
 % at the given path.
 build(Path) ->
-    case file:read_file_info(Path) of
+    case file:read_file_info(Path, [{time, posix}]) of
         {ok, FileInfo} -> build(Path, FileInfo);
         {error, Reason} -> {error, Reason}
     end.
 
 %% Utilities
 
-build(Path, FileInfo) ->
+build(Path, #file_info{ size = Size,
+			type = Type,
+			access = Access,
+			mtime = Mtime }) ->
     #fs_entry{ path = Path,
                hash = <<>>,
-               file_info = FileInfo }.
+               size = Size,
+               type = Type,
+               access = Access,
+               mtime = Mtime }.

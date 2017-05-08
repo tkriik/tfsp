@@ -24,8 +24,10 @@ module_test_() ->
        {"finding nonexistent entry", fun find_nonexistent/0},
        {"finding new entry", fun find_new/0},
        {"finding updated entry", fun find_updated/0},
-       {"finding removed entry", fun find_removed/0}]
-     }}.
+       {"finding removed entry", fun find_removed/0}
+      ]
+     }
+    }.
 
 %% Fixtures
 

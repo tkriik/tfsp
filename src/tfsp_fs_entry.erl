@@ -18,7 +18,7 @@
 % Builds a new file system entry from the file/directory
 % at the given path.
 build(Path) ->
-    case file:read_file_info(Path, [{time, posix}]) of
+    case file:read_link_info(Path, [{time, posix}]) of
         {ok, FileInfo} -> build(Path, FileInfo);
         {error, Reason} -> {error, Reason}
     end.
@@ -31,21 +31,22 @@ build(Path, #file_info{ size = Size,
                         mtime = Mtime }) ->
 	case Type of
         regular -> build_regular_entry(Path, Size, Access, Mtime);
-        directory -> build_directory_entry(Path, Access, Mtime)
+        directory -> build_directory_entry(Path, Access, Mtime);
+        _ -> {error, {invalid_type, Type}}
     end.
 
 build_regular_entry(Path, Size, Access, Mtime) ->
-    #fs_entry{ path = Path,
-               hash = <<>>, % TODO: compute SHA256
-               size = Size,
-               type = regular,
-               access = Access,
-               mtime = Mtime }.
+    {ok, #fs_entry{ path = Path,
+                    hash = <<>>, % TODO: compute SHA256
+                    size = Size,
+                    type = regular,
+                    access = Access,
+                    mtime = Mtime }}.
 
 build_directory_entry(Path, Access, Mtime) ->
-    #fs_entry{ path = Path,
-               hash = <<>>, % ignore hash
-               size = 0, % ignore size
-               type = directory,
-               access = Access,
-               mtime = Mtime }.
+    {ok, #fs_entry{ path = Path,
+                    hash = <<>>, % ignore hash
+                    size = 0, % ignore size
+                    type = directory,
+                    access = Access,
+                    mtime = Mtime }}.

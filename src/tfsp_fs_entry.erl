@@ -26,12 +26,26 @@ build(Path) ->
 %% Utilities
 
 build(Path, #file_info{ size = Size,
-			type = Type,
-			access = Access,
-			mtime = Mtime }) ->
+                        type = Type,
+                        access = Access,
+                        mtime = Mtime }) ->
+	case Type of
+        regular -> build_regular_entry(Path, Size, Access, Mtime);
+        directory -> build_directory_entry(Path, Access, Mtime)
+    end.
+
+build_regular_entry(Path, Size, Access, Mtime) ->
     #fs_entry{ path = Path,
-               hash = <<>>,
+               hash = <<>>, % TODO: compute SHA256
                size = Size,
-               type = Type,
+               type = regular,
+               access = Access,
+               mtime = Mtime }.
+
+build_directory_entry(Path, Access, Mtime) ->
+    #fs_entry{ path = Path,
+               hash = <<>>, % ignore hash
+               size = 0, % ignore size
+               type = directory,
                access = Access,
                mtime = Mtime }.

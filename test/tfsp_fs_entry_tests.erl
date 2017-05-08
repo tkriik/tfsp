@@ -17,23 +17,41 @@
 %% Main test
 
 module_test_() ->
-    [{"file entry construction with small file", fun small_file_build/0},
-     {"file entry construction with large file", fun large_file_build/0}].
+    [{"file entry construction with small file", fun with_small_file/0},
+     {"file entry construction with large file", fun with_large_file/0},
+     {"file entry construction with directory", fun with_directory/0}].
 
 %% Tests
 
-small_file_build() ->
-    file_build(?SMALL_FILE, <<>>, 1064, 1494221667).
+with_small_file() ->
+    with_file(filename:join(?DATA_DIR, ?SMALL_FILE),
+              <<>>,
+              1064,
+              regular,
+              read_write,
+              1494221667).
 
-large_file_build() ->
-    file_build(?LARGE_FILE, <<>>, 286889, 1494221667).
+with_large_file() ->
+    with_file(filename:join(?DATA_DIR, ?LARGE_FILE),
+              <<>>,
+              286889,
+              regular,
+              read_write,
+              1494221667).
 
-file_build(Filename, Hash, Size, Mtime) ->
-    Path = filename:join(?DATA_DIR, Filename),
+with_directory() ->
+    with_file(?DATA_DIR,
+              <<>>,
+              0,
+              directory,
+              read_write,
+              1494221667).
+
+with_file(Path, Hash, Size, Type, Access, Mtime) ->
     Entry = tfsp_fs_entry:build(Path),
     ?assertEqual(Path, Entry#fs_entry.path),
     ?assertEqual(Hash, Entry#fs_entry.hash),
     ?assertEqual(Size, Entry#fs_entry.size),
-    ?assertEqual(regular, Entry#fs_entry.type),
-    ?assertEqual(read_write, Entry#fs_entry.access),
+    ?assertEqual(Type, Entry#fs_entry.type),
+    ?assertEqual(Access, Entry#fs_entry.access),
     ?assertEqual(Mtime, Entry#fs_entry.mtime).

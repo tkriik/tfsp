@@ -39,16 +39,28 @@ module_test_() ->
 with_small_file() ->
     Path = filename:join(?DATA_DIR, ?SMALL_FILE),
     set_mtime(Path, 1494221667),
-    with_file(Path, <<>>, 1064, regular, read_write, 1494221667).
+    with_file(Path,
+              <<131,41,250,6,40,66,164,44,119,157,178,254,125,150,165,27,169,
+                229,25,100,150,77,81,190,146,114,124,253,109,144,120,60>>,
+              1064,
+              regular,
+              read_write,
+              1494221667).
 
 with_large_file() ->
     Path = filename:join(?DATA_DIR, ?LARGE_FILE),
     set_mtime(Path, 1494221667),
-    with_file(Path, <<>>, 286889, regular, read_write, 1494221667).
+    with_file(Path,
+              <<216,164,148,172,100,134,39,211,7,162,233,96,64,24,48,209,1,235,
+                236,194,166,85,60,251,252,88,141,117,59,153,209,14>>,
+              286889,
+              regular,
+              read_write,
+              1494221667).
 
 with_directory() ->
     set_mtime(?DATA_DIR, 1494221667),
-    with_file(?DATA_DIR, <<>>, 0, directory, read_write, 1494221667).
+    with_file(?DATA_DIR, undefined, undefined, directory, read_write, 1494221667).
 
 with_symlink() ->
     with_error(filename:join(?DATA_DIR, ?SYMLINK_FILE), {invalid_type, symlink}).

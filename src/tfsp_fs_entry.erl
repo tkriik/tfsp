@@ -7,6 +7,10 @@
 
 -include("fs_entry.hrl").
 
+%% Defines
+
+-define(HASH_BLOCK_SIZE, 65536).
+
 
 %% Specs
 
@@ -36,8 +40,9 @@ build(Path, #file_info{ size = Size,
     end.
 
 build_regular_entry(Path, Size, Access, Mtime) ->
+    Hash = build_hash(Path),
     {ok, #fs_entry{ path = Path,
-                    hash = <<>>, % TODO: compute SHA256
+                    hash = Hash,
                     size = Size,
                     type = regular,
                     access = Access,
@@ -45,8 +50,20 @@ build_regular_entry(Path, Size, Access, Mtime) ->
 
 build_directory_entry(Path, Access, Mtime) ->
     {ok, #fs_entry{ path = Path,
-                    hash = <<>>, % ignore hash
-                    size = 0, % ignore size
                     type = directory,
                     access = Access,
                     mtime = Mtime }}.
+
+build_hash(Path) ->
+    {ok, IoDevice} = file:open(Path, [read, raw]),
+    Hash = build_hash(IoDevice, crypto:hash_init(sha256)),
+    file:close(IoDevice),
+    Hash.
+
+build_hash(IoDevice, Ctx) ->
+    case file:read(IoDevice, ?HASH_BLOCK_SIZE) of
+        eof ->
+            crypto:hash_final(Ctx);
+        {ok, Data} ->
+            build_hash(IoDevice, crypto:hash_update(Ctx, Data))
+    end.

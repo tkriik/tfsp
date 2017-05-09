@@ -8,7 +8,7 @@
 
 -export([start_link/1]).
 
--ifdef(EXPORT_TEST).
+-ifdef(TFSP_TEST).
 -export([scan/1]).
 -endif.
 

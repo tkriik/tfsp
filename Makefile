@@ -7,7 +7,7 @@ OBJ=            ebin/tfsp_fs_entry.beam \
 
 ERL=		erl
 ERLC=		erlc
-DFLAGS=		-D EXPORT_TEST
+DFLAGS=		-D TFSP_TEST
 EFLAGS=         -I include/ -o ebin/ $(DFLAGS)
 
 all: $(OBJ)

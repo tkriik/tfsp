@@ -1,8 +1,3 @@
-SRC=		src/tfsp_fs_entry.erl \
-		src/tfsp_fs_table.erl \
-		test/tfsp_fs_entry_tests.erl \
-                test/tfsp_fs_table_tests.erl
-
 OBJ=            ebin/tfsp_fs_entry.beam \
 		ebin/tfsp_fs_scanner.beam \
 		ebin/tfsp_fs_table.beam \

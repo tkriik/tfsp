@@ -58,7 +58,7 @@ build_directory_entry(Path, Access, Mtime) ->
 build_hash(Path) ->
     {ok, IoDevice} = file:open(Path, [read, raw]),
     Hash = build_hash(IoDevice, crypto:hash_init(sha256)),
-    file:close(IoDevice),
+    ok = file:close(IoDevice),
     Hash.
 
 build_hash(IoDevice, Ctx) ->

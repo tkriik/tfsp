@@ -59,5 +59,5 @@ remove(Path) ->
 % Returns the number of entries in the table.
 count() ->
     InfoList = ets:info(?MODULE),
-    {size, Size} = proplists:lookup(size, ets:info(?MODULE)),
+    {size, Size} = proplists:lookup(size, InfoList),
     Size.

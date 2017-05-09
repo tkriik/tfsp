@@ -1,8 +1,8 @@
 OBJ=            ebin/tfsp_fs_entry.beam \
-		ebin/tfsp_fs_scanner.beam \
-		ebin/tfsp_fs_table.beam \
 		ebin/tfsp_fs_entry_tests.beam \
+		ebin/tfsp_fs_scanner.beam \
 		ebin/tfsp_fs_scanner_tests.beam \
+		ebin/tfsp_fs_table.beam \
                 ebin/tfsp_fs_table_tests.beam
 
 ERL=		erl

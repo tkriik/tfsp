@@ -1,4 +1,4 @@
-%% Tests for the file system entry module interface.
+%%% Tests for the file system entry module interface.
 
 -module(tfsp_fs_table_tests).
 

@@ -9,10 +9,10 @@
 
 %% Defines
 
--define(DATA_DIR, "test/data/").
--define(SMALL_FILE, "LICENSE.txt").
--define(LARGE_FILE, "pelican.jpg").
--define(SYMLINK_FILE, "symlink").
+-define(DATA_DIR, <<"test/data/">>).
+-define(SMALL_FILE, <<"LICENSE.txt">>).
+-define(LARGE_FILE, <<"pelican.jpg">>).
+-define(SYMLINK_FILE, <<"symlink">>).
 
 
 %% Main test

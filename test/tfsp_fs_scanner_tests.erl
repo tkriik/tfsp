@@ -5,10 +5,10 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--define(SCAN_PATH, "test/data/").
--define(MODIFIED_FILE, "nested/LICENSE_COPY.txt").
--define(NEW_DIR, "new/").
--define(NEW_FILE, "new_file").
+-define(SCAN_PATH, <<"test/data/">>).
+-define(MODIFIED_FILE, <<"nested/LICENSE_COPY.txt">>).
+-define(NEW_DIR, <<"new/">>).
+-define(NEW_FILE, <<"new_file">>).
 
 %% Main tests
 

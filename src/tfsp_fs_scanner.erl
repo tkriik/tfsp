@@ -47,7 +47,7 @@ init([Path, Interval]) ->
 % Main loop
 loop(Interval) ->
     timer:send_after(Interval * 1000, again),
-    scan("./"),
+    scan(<<"./">>),
     receive
         again -> loop(Interval);
         Other -> error_logger:error_msg("Unknown message: ~p~n", [Other])
@@ -60,7 +60,14 @@ scan(Path) ->
     lists:foldl(fun scan_entry/2, 0, FullPaths).
 
 with_path(Path) ->
-    fun(Filename) -> filename:join(Path, Filename) end.
+    fun(Filename) ->
+            ensure_binary_path(filename:join(Path, Filename))
+    end.
+
+ensure_binary_path(Path) ->
+    if is_binary(Path) -> Path;
+       is_list(Path) -> list_to_binary(Path)
+    end.
 
 % Scans a new entry if it does not exist in the fs table.
 % If it exists, only rescans if modification time is greater

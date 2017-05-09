@@ -10,6 +10,9 @@
 -define(NEW_DIR, <<"new/">>).
 -define(NEW_FILE, <<"new_file">>).
 
+-define(TFSP_RE, "^[.].*.tfsp$").
+-define(DAT_RE, "^.*.dat$").
+
 %% Main tests
 
 scan_test_() ->
@@ -20,6 +23,7 @@ scan_test_() ->
        fun setup/0,
        fun cleanup/1,
        [{"once", fun scan_once/0},
+        {"once with ignored regexp list", fun scan_once_ignore/0},
         {"twice", fun scan_twice/0},
         {"twice with 1 modified", fun scan_twice_modify/0},
         {"twice with 2 files created", fun scan_twice_create/0},
@@ -33,38 +37,44 @@ scan_test_() ->
 %% Test implementations
 
 scan_once() ->
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH)),
+    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()).
+
+scan_once_ignore() ->
+    IgnoreRes = ignoreRes([?TFSP_RE, ?DAT_RE]),
+    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH, IgnoreRes)),
     ?assertEqual(5, tfsp_fs_table:count()).
+
 
 scan_twice() ->
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()),
-    ?assertEqual(0, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()).
+    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()),
+    ?assertEqual(0, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()).
 
 scan_twice_modify() ->
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
-    ?assertEqual(1, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()).
+    ?assertEqual(1, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()).
 
 scan_twice_create() ->
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(2, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(7, tfsp_fs_table:count()).
+    ?assertEqual(2, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(9, tfsp_fs_table:count()).
 
 scan_twice_create_modify() ->
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(5, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, tfsp_fs_table:count()),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(3, tfsp_fs_scanner:scan(?SCAN_PATH)),
-    ?assertEqual(7, tfsp_fs_table:count()).
+    ?assertEqual(3, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(9, tfsp_fs_table:count()).
 
 %% Fixtures
 
@@ -79,6 +89,9 @@ cleanup(_) ->
 
 
 %% Utilities
+
+ignoreRes(Regexps) ->
+    lists:map(fun(Regexp) -> {ok, Re} = re:compile(Regexp), Re end, Regexps).
 
 make_file(Dir, Filename) ->
     {ok, IoDevice} = file:open(filename:join(Dir, Filename),

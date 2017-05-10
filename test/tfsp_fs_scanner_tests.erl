@@ -5,6 +5,8 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+-include("fs_entry.hrl").
+
 -define(SCAN_PATH, <<"test/data/">>).
 -define(MODIFIED_FILE, <<"nested/LICENSE_COPY.txt">>).
 -define(NEW_DIR, <<"new/">>).
@@ -13,24 +15,40 @@
 -define(TFSP_RE, "^[.].*.tfsp$").
 -define(DAT_RE, "^.*.dat$").
 
+
 %% Main tests
 
-scan_test_() ->
+module_test_() ->
     {"Verifies that the file system entry scan routine "
      "works as expected.",
-     {"scanning existing files",
-      {foreach,
-       fun setup/0,
-       fun cleanup/1,
-       [{"once", fun scan_once/0},
-        {"once with ignored regexp list", fun scan_once_ignore/0},
-        {"twice", fun scan_twice/0},
-        {"twice with 1 modified", fun scan_twice_modify/0},
-        {"twice with 2 files created", fun scan_twice_create/0},
-        {"twice with 2 files created and 1 modified", fun scan_twice_create_modify/0}
-       ]
-      }
+     [{"scanning existing files", scan_tests()},
+      {"checking deleted files", deleted_tests()}
+     ]
+    }.
+
+scan_tests() ->
+    {"scanning existing files",
+     {foreach,
+      fun setup/0,
+      fun cleanup/1,
+      [{"once", fun scan_once/0},
+       {"once with ignored regexp list", fun scan_once_ignore/0},
+       {"twice", fun scan_twice/0},
+       {"twice with 1 modified", fun scan_twice_modify/0},
+       {"twice with 2 files created", fun scan_twice_create/0},
+       {"twice with 2 files created and 1 modified", fun scan_twice_create_modify/0}
+      ]
      }
+    }.
+
+deleted_tests() ->
+    {foreach,
+     fun setup/0,
+     fun cleanup/1,
+     [{"after initial scan", fun check_deleted_initial/0},
+      {"with 1 deleted after initial scan", fun check_deleted_one/0},
+      {"with 2 deleted after initial scan", fun check_deleted_one/0}
+     ]
     }.
 
 
@@ -76,6 +94,39 @@ scan_twice_create_modify() ->
     ?assertEqual(3, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
     ?assertEqual(9, tfsp_fs_table:count()).
 
+check_deleted_initial() ->
+    make_file(?SCAN_PATH, ?NEW_FILE),
+    tfsp_fs_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+
+check_deleted_one() ->
+    make_file(?SCAN_PATH, ?NEW_FILE),
+    tfsp_fs_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_fs_scanner:check_deleted()),
+    {ok, ExistingEntry} = find_entry(?SCAN_PATH, ?NEW_FILE),
+    del_file(?SCAN_PATH, ?NEW_FILE),
+    ?assertEqual(1, tfsp_fs_scanner:check_deleted()),
+    {ok, DeletedEntry} = find_entry(?SCAN_PATH, ?NEW_FILE),
+    ?assertEqual(ExistingEntry#fs_entry{ deleted = true }, DeletedEntry),
+    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+
+check_deleted_two() ->
+    make_file(?SCAN_PATH, ?NEW_FILE),
+    make_file(?SCAN_PATH, ?NEW_DIR),
+    tfsp_fs_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_fs_scanner:check_deleted()),
+    {ok, ExistingFile} = find_entry(?SCAN_PATH, ?NEW_FILE),
+    {ok, ExistingDir} = find_entry(?SCAN_PATH, ?NEW_DIR),
+    del_file(?SCAN_PATH, ?NEW_FILE),
+    del_dir(?SCAN_PATH, ?NEW_DIR),
+    ?assertEqual(2, tfsp_fs_scanner:check_deleted()),
+    {ok, DeletedFile} = find_entry(?SCAN_PATH, ?NEW_FILE),
+    {ok, DeletedDir} = find_entry(?SCAN_PATH, ?NEW_DIR),
+    ?assertEqual(ExistingFile#fs_entry{ deleted = true }, DeletedFile),
+    ?assertEqual(ExistingDir#fs_entry{ deleted = true }, DeletedDir),
+    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+
+
 %% Fixtures
 
 setup() ->
@@ -106,6 +157,9 @@ del_file(Dir, Filename) ->
 
 del_dir(Dir, Filename) ->
     file:del_dir(filename:join(Dir, Filename)).
+
+find_entry(Dir, Filename) ->
+    tfsp_fs_table:find(filename:join(Dir, Filename)).
 
 set_mtime(Dir, Filename, Mtime) ->
     FileInfo = #file_info{ mtime = Mtime },

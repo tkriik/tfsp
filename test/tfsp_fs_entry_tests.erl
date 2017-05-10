@@ -45,7 +45,8 @@ with_small_file() ->
               1064,
               regular,
               read_write,
-              1494221667).
+              1494221667,
+              false).
 
 with_large_file() ->
     Path = filename:join(?DATA_DIR, ?LARGE_FILE),
@@ -56,11 +57,12 @@ with_large_file() ->
               286889,
               regular,
               read_write,
-              1494221667).
+              1494221667,
+              false).
 
 with_directory() ->
     set_mtime(?DATA_DIR, 1494221667),
-    with_file(?DATA_DIR, undefined, undefined, directory, read_write, 1494221667).
+    with_file(?DATA_DIR, undefined, undefined, directory, read_write, 1494221667, false).
 
 with_symlink() ->
     with_error(filename:join(?DATA_DIR, ?SYMLINK_FILE), {invalid_type, symlink}).
@@ -68,7 +70,7 @@ with_symlink() ->
 with_nonexistent() ->
     with_error(filename:join(?DATA_DIR, "NONEXISTENT"), enoent).
 
-with_file(Path, Hash, Size, Type, Access, Mtime) ->
+with_file(Path, Hash, Size, Type, Access, Mtime, Deleted) ->
     Result = tfsp_fs_entry:build(Path),
     ?assertMatch({ok, _}, Result),
     {ok, Entry} = Result,
@@ -77,7 +79,8 @@ with_file(Path, Hash, Size, Type, Access, Mtime) ->
     ?assertEqual(Size, Entry#fs_entry.size),
     ?assertEqual(Type, Entry#fs_entry.type),
     ?assertEqual(Access, Entry#fs_entry.access),
-    ?assertEqual(Mtime, Entry#fs_entry.mtime).
+    ?assertEqual(Mtime, Entry#fs_entry.mtime),
+    ?assertEqual(Deleted, Entry#fs_entry.deleted).
 
 with_error(Path, Reason) ->
     Result = tfsp_fs_entry:build(Path),

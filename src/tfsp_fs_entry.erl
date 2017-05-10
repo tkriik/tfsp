@@ -47,13 +47,15 @@ build_regular_entry(Path, Size, Access, Mtime) ->
                     size = Size,
                     type = regular,
                     access = Access,
-                    mtime = Mtime }}.
+                    mtime = Mtime,
+                    deleted = false }}.
 
 build_directory_entry(Path, Access, Mtime) ->
     {ok, #fs_entry{ path = Path,
                     type = directory,
                     access = Access,
-                    mtime = Mtime }}.
+                    mtime = Mtime,
+                    deleted = false }}.
 
 build_hash(Path) ->
     {ok, IoDevice} = file:open(Path, [read, raw]),

@@ -4,6 +4,7 @@
                     size,
                     type,
                     access,
-                    mtime }).
+                    mtime,
+                    deleted }).
 
 -type fs_entry() :: #fs_entry{}.

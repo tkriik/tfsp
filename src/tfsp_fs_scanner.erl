@@ -9,7 +9,8 @@
 -export([start_link/1]).
 
 -ifdef(TFSP_TEST).
--export([scan/2]).
+-export([scan/2,
+         check_deleted/0]).
 -endif.
 
 -include_lib("kernel/include/file.hrl").
@@ -27,6 +28,10 @@
 -spec scan_entry(file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
 -spec update_entry(file:path(), [re:mp()], fs_entry()) -> non_neg_integer().
 -spec create_entry(file:path(), [re:mp()]) -> non_neg_integer().
+
+-spec check_deleted() -> non_neg_integer().
+-spec fold_delete(fs_entry(), non_neg_integer()) -> non_neg_integer().
+-spec mark_deleted(fs_entry()) -> ok.
 
 
 %% API
@@ -48,11 +53,15 @@ init([Path, Interval, IgnoreRes]) ->
 % Main loop
 loop(Interval, IgnoreRes) ->
     timer:send_after(Interval * 1000, again),
-    scan(<<"./">>, IgnoreRes),
+    _NumScanned = scan(<<"./">>, IgnoreRes),
+    _NumDeleted = check_deleted(),
     receive
         again -> loop(Interval, IgnoreRes);
         Other -> error_logger:error_msg("Unknown message: ~p~n", [Other])
     end.
+
+
+%% Scanning
 
 % Main scan routine. Returns the number of entries built.
 scan(Path, IgnoreRes) ->
@@ -84,7 +93,6 @@ is_path_allowed(Path, [IgnoreRe | IgnoreRes]) ->
         {match, _} -> false
     end.
 
-
 % Scans a new entry if it does not exist in the fs table.
 % If it exists, only rescans if modification time is greater
 % than stored. The accumulator stores the number of entries
@@ -111,7 +119,7 @@ update_entry(Filename, IgnoreRes, #fs_entry{ type = Type, mtime = OldMtime }) ->
 create_entry(Filename, IgnoreRes) ->
     case tfsp_fs_entry:build(Filename) of
         {ok, Entry} ->
-            tfsp_fs_table:insert(Entry),
+            ok = tfsp_fs_table:insert(Entry),
             case Entry#fs_entry.type of
                 regular -> 1;
                 directory -> 1 + scan(Filename, IgnoreRes) % recurse if directory
@@ -122,3 +130,31 @@ create_entry(Filename, IgnoreRes) ->
             tfsp_fs_table:remove(Filename), % Delete old entry if it exists
             0
     end.
+
+
+%% Deleted checking
+
+% Iterates over all the entries in the fs table and checks those
+% with their deleted flag not set whether they still exist.
+% Those that don't get their 'deleted' flag set to true.
+% Returns the number of entries marked deleted.
+check_deleted() ->
+    ets:foldl(fun fold_delete/2, 0, tfsp_fs_table).
+
+fold_delete(#fs_entry{ path = Path, deleted = Deleted } = Entry, NumDeleted) ->
+    case Deleted of
+        true -> NumDeleted;
+        false -> case file:read_link_info(Path) of
+                     {error, enoent} ->
+                         mark_deleted(Entry),
+                         NumDeleted + 1;
+                     {error, enotdir} ->
+                         mark_deleted(Entry),
+                         NumDeleted + 1;
+                     _ ->
+                         NumDeleted
+                 end
+    end.
+
+mark_deleted(Entry) ->
+    ok = tfsp_fs_table:insert(Entry#fs_entry{ deleted = true }).

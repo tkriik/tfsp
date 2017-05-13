@@ -22,15 +22,12 @@ module_test_() ->
      [{"with valid files",
        [{"small file", fun with_small_file/0},
         {"large file", fun with_large_file/0},
-        {"directory", fun with_directory/0}
-       ]
+        {"directory", fun with_directory/0}]
       },
       {"with invalid files",
        [{"symlink", fun with_symlink/0},
-        {"nonexistent", fun with_nonexistent/0}
-       ]
-      }
-     ]
+        {"nonexistent", fun with_nonexistent/0}]
+      }]
     }.
 
 

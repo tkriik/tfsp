@@ -19,110 +19,103 @@
 %% Main tests
 
 module_test_() ->
-    {"Verifies that the file system entity scan routine "
-     "works as expected.",
-     [{"scanning existing files", scan_tests()},
-      {"checking deleted files", deleted_tests()}
-     ]
+    {"file system entity scanner interface",
+     [{"scanning existing entities", scan_tests()},
+      {"checking deleted entities", deleted_tests()}]
     }.
 
 scan_tests() ->
-    {foreach,
-     fun setup/0,
-     fun cleanup/1,
-     [{"once", fun scan_once/0},
-      {"once with ignored regexp list", fun scan_once_ignore/0},
-      {"twice", fun scan_twice/0},
-      {"twice with 1 modified", fun scan_twice_modify/0},
-      {"twice with 2 files created", fun scan_twice_create/0},
-      {"twice with 2 files created and 1 modified", fun scan_twice_create_modify/0}
-     ]
-    }.
+    {foreach, fun setup/0, fun cleanup/1,
+     [fun scan_once/1,
+      fun scan_once_ignore/1,
+      fun scan_twice/1,
+      fun scan_twice_modify/1,
+      fun scan_twice_create/1,
+      fun scan_twice_create_modify/1]}.
 
 deleted_tests() ->
-    {foreach,
-     fun setup/0,
-     fun cleanup/1,
-     [{"after initial scan", fun check_deleted_initial/0},
-      {"with 1 deleted after initial scan", fun check_deleted_one/0},
-      {"with 2 deleted after initial scan", fun check_deleted_two/0}
-     ]
-    }.
+    {foreach, fun setup/0, fun cleanup/1,
+     [fun check_none_deleted/1,
+      fun check_one_deleted/1,
+      fun check_two_deleted/1,
+      fun check_deleted_ent/1]}.
 
 
 %% Test implementations
 
-scan_once() ->
-    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()).
+scan_once(_) ->
+    {"with single scan",
+     [?_assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+      ?_assertEqual(7, fs_ent_tab:count())]}.
 
-scan_once_ignore() ->
+scan_once_ignore(_) ->
     IgnoreRes = ignoreRes([?TFSP_RE, ?DAT_RE]),
-    ?assertEqual(5, tfsp_scanner:scan(?SCAN_PATH, IgnoreRes)),
-    ?assertEqual(5, fs_ent_tab:count()).
+    {"with ignored pattern list",
+     [?_assertEqual(5, tfsp_scanner:scan(?SCAN_PATH, IgnoreRes)),
+      ?_assertEqual(5, fs_ent_tab:count())]}.
 
+scan_twice(_) ->
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    {"with duplicate scan",
+     [?_assertEqual(0, tfsp_scanner:scan(?SCAN_PATH, [])),
+      ?_assertEqual(7, fs_ent_tab:count())]}.
 
-scan_twice() ->
-    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()),
-    ?assertEqual(0, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()).
-
-scan_twice_modify() ->
-    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()),
+scan_twice_modify(_) ->
+    tfsp_scanner:scan(?SCAN_PATH, []),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
-    ?assertEqual(1, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()).
+    {"with modification in between",
+     [?_assertEqual(1, tfsp_scanner:scan(?SCAN_PATH, [])),
+      ?_assertEqual(7, fs_ent_tab:count())]}.
 
-scan_twice_create() ->
-    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()),
+scan_twice_create(_) ->
+    tfsp_scanner:scan(?SCAN_PATH, []),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(2, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(9, fs_ent_tab:count()).
+    {"with creation in between",
+     [?_assertEqual(2, tfsp_scanner:scan(?SCAN_PATH, [])),
+      ?_assertEqual(9, fs_ent_tab:count())]}.
 
-scan_twice_create_modify() ->
-    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, fs_ent_tab:count()),
+scan_twice_create_modify(_) ->
+    tfsp_scanner:scan(?SCAN_PATH, []),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(3, tfsp_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(9, fs_ent_tab:count()).
+    {"with creation and modification in between",
+     [?_assertEqual(3, tfsp_scanner:scan(?SCAN_PATH, [])),
+      ?_assertEqual(9, fs_ent_tab:count())]}.
 
-check_deleted_initial() ->
+check_none_deleted(_) ->
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    {"with no deletion",
+     [?_assertEqual(0, tfsp_scanner:check_deleted())]}.
+
+check_one_deleted(_) ->
     make_file(?SCAN_PATH, ?NEW_FILE),
     tfsp_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_scanner:check_deleted()).
-
-check_deleted_one() ->
-    make_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_scanner:check_deleted()),
-    {ok, ExistingEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
     del_file(?SCAN_PATH, ?NEW_FILE),
-    ?assertEqual(1, tfsp_scanner:check_deleted()),
-    {ok, DeletedEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
-    ?assertEqual(ExistingEnt#fs_ent{ deleted = true }, DeletedEnt),
-    ?assertEqual(0, tfsp_scanner:check_deleted()).
+    {"with one deleted",
+     [?_assertEqual(1, tfsp_scanner:check_deleted()),
+      ?_assertEqual(0, tfsp_scanner:check_deleted())]}.
 
-check_deleted_two() ->
+check_two_deleted(_) ->
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
     tfsp_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_scanner:check_deleted()),
-    {ok, ExistingFile} = find_ent(?SCAN_PATH, ?NEW_FILE),
-    {ok, ExistingDir} = find_ent(?SCAN_PATH, ?NEW_DIR),
     del_file(?SCAN_PATH, ?NEW_FILE),
     del_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(2, tfsp_scanner:check_deleted()),
-    {ok, DeletedFile} = find_ent(?SCAN_PATH, ?NEW_FILE),
-    {ok, DeletedDir} = find_ent(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(ExistingFile#fs_ent{ deleted = true }, DeletedFile),
-    ?assertEqual(ExistingDir#fs_ent{ deleted = true }, DeletedDir),
-    ?assertEqual(0, tfsp_scanner:check_deleted()).
+    {"with two deleted",
+     [?_assertEqual(2, tfsp_scanner:check_deleted()),
+      ?_assertEqual(0, tfsp_scanner:check_deleted())]}.
+
+check_deleted_ent(_) ->
+    make_file(?SCAN_PATH, ?NEW_FILE),
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    {ok, ExistingEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
+    del_file(?SCAN_PATH, ?NEW_FILE),
+    tfsp_scanner:check_deleted(),
+    {ok, DeletedEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
+    {"whether deleted entity was marked deleted",
+     [?_assertEqual(ExistingEnt#fs_ent{ deleted = true }, DeletedEnt)]}.
 
 
 %% Fixtures

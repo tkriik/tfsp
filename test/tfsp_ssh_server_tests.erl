@@ -27,7 +27,7 @@ daemon_tests() ->
      {"daemon setup and teardown", fun test_start_stop/0}}.
 
 conn_tests() ->
-    {setup, fun setup/0, fun cleanup/1,
+    {foreach, fun setup/0, fun cleanup/1,
      [{"connection setup and teardown", fun test_connection/0},
       {"channel setup and teardown", fun test_channel/0},
       {"subsystem execution request", fun test_subsystem/0}]
@@ -53,14 +53,16 @@ test_channel() ->
     Res = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
     ?assertMatch({ok, _}, Res),
     {ok, ChanId} = Res,
-    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)).
+    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
+    ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_subsystem() ->
     {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
     Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
     ?assertEqual(success, Res),
-    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)).
+    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
+    ?assertEqual(ok, ssh:close(ConnRef)).
 
 
 %% Fixtures

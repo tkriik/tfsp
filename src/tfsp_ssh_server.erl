@@ -4,7 +4,7 @@
 -behaviour(ssh_daemon_channel).
 
 -export([start/3,
-        stop/1]).
+         stop/1]).
 
 -export([init/1,
          handle_ssh_msg/2,
@@ -61,7 +61,6 @@ handle_msg(_Msg, St) ->
     {ok, St}.
 
 handle_ssh_msg(_Msg, St) ->
-    % TODO: log
     {ok, St}.
 
 terminate(_Reason, _St) ->

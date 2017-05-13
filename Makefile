@@ -22,6 +22,10 @@ test: $(OBJ)
 	       -eval 'case eunit:test([{dir, "ebin/"}], [verbose]) of error -> init:stop(1); Result -> Result end.' \
 	       -s init stop
 
+shell: $(OBJ)
+	$(ERL) -pa ebin/ \
+	       -eval '[code:ensure_loaded(list_to_atom(filename:rootname(filename:basename(F)))) || F <- filelib:wildcard("ebin/*.beam")].'
+
 ebin/bitset.beam: src/bitset.erl
 	$(ERLC) $(EFLAGS) src/bitset.erl
 

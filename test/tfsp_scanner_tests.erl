@@ -1,11 +1,11 @@
-%%% Tests for the file system entry scanner interface.
+%%% Tests for the file system entity scanner interface.
 
--module(tfsp_fs_scanner_tests).
+-module(tfsp_scanner_tests).
 
 -include_lib("kernel/include/file.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--include("fs_entry.hrl").
+-include("fs_ent.hrl").
 
 -define(SCAN_PATH, <<"test/data/">>).
 -define(MODIFIED_FILE, <<"nested/LICENSE_COPY.txt">>).
@@ -19,7 +19,7 @@
 %% Main tests
 
 module_test_() ->
-    {"Verifies that the file system entry scan routine "
+    {"Verifies that the file system entity scan routine "
      "works as expected.",
      [{"scanning existing files", scan_tests()},
       {"checking deleted files", deleted_tests()}
@@ -47,7 +47,7 @@ deleted_tests() ->
      fun cleanup/1,
      [{"after initial scan", fun check_deleted_initial/0},
       {"with 1 deleted after initial scan", fun check_deleted_one/0},
-      {"with 2 deleted after initial scan", fun check_deleted_one/0}
+      {"with 2 deleted after initial scan", fun check_deleted_two/0}
      ]
     }.
 
@@ -55,88 +55,90 @@ deleted_tests() ->
 %% Test implementations
 
 scan_once() ->
-    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()).
+    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()).
 
 scan_once_ignore() ->
     IgnoreRes = ignoreRes([?TFSP_RE, ?DAT_RE]),
-    ?assertEqual(5, tfsp_fs_scanner:scan(?SCAN_PATH, IgnoreRes)),
-    ?assertEqual(5, tfsp_fs_table:count()).
+    ?assertEqual(5, tfsp_scanner:scan(?SCAN_PATH, IgnoreRes)),
+    ?assertEqual(5, fs_ent_tab:count()).
 
 
 scan_twice() ->
-    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()),
-    ?assertEqual(0, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()).
+    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()),
+    ?assertEqual(0, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()).
 
 scan_twice_modify() ->
-    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
-    ?assertEqual(1, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()).
+    ?assertEqual(1, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()).
 
 scan_twice_create() ->
-    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(2, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(9, tfsp_fs_table:count()).
+    ?assertEqual(2, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(9, fs_ent_tab:count()).
 
 scan_twice_create_modify() ->
-    ?assertEqual(7, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(7, tfsp_fs_table:count()),
+    ?assertEqual(7, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(7, fs_ent_tab:count()),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(3, tfsp_fs_scanner:scan(?SCAN_PATH, [])),
-    ?assertEqual(9, tfsp_fs_table:count()).
+    ?assertEqual(3, tfsp_scanner:scan(?SCAN_PATH, [])),
+    ?assertEqual(9, fs_ent_tab:count()).
 
 check_deleted_initial() ->
     make_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_fs_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_scanner:check_deleted()).
 
 check_deleted_one() ->
     make_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_fs_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_fs_scanner:check_deleted()),
-    {ok, ExistingEntry} = find_entry(?SCAN_PATH, ?NEW_FILE),
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_scanner:check_deleted()),
+    {ok, ExistingEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
     del_file(?SCAN_PATH, ?NEW_FILE),
-    ?assertEqual(1, tfsp_fs_scanner:check_deleted()),
-    {ok, DeletedEntry} = find_entry(?SCAN_PATH, ?NEW_FILE),
-    ?assertEqual(ExistingEntry#fs_entry{ deleted = true }, DeletedEntry),
-    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+    ?assertEqual(1, tfsp_scanner:check_deleted()),
+    {ok, DeletedEnt} = find_ent(?SCAN_PATH, ?NEW_FILE),
+    ?assertEqual(ExistingEnt#fs_ent{ deleted = true }, DeletedEnt),
+    ?assertEqual(0, tfsp_scanner:check_deleted()).
 
 check_deleted_two() ->
     make_file(?SCAN_PATH, ?NEW_FILE),
-    make_file(?SCAN_PATH, ?NEW_DIR),
-    tfsp_fs_scanner:scan(?SCAN_PATH, []),
-    ?assertEqual(0, tfsp_fs_scanner:check_deleted()),
-    {ok, ExistingFile} = find_entry(?SCAN_PATH, ?NEW_FILE),
-    {ok, ExistingDir} = find_entry(?SCAN_PATH, ?NEW_DIR),
+    make_dir(?SCAN_PATH, ?NEW_DIR),
+    tfsp_scanner:scan(?SCAN_PATH, []),
+    ?assertEqual(0, tfsp_scanner:check_deleted()),
+    {ok, ExistingFile} = find_ent(?SCAN_PATH, ?NEW_FILE),
+    {ok, ExistingDir} = find_ent(?SCAN_PATH, ?NEW_DIR),
     del_file(?SCAN_PATH, ?NEW_FILE),
     del_dir(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(2, tfsp_fs_scanner:check_deleted()),
-    {ok, DeletedFile} = find_entry(?SCAN_PATH, ?NEW_FILE),
-    {ok, DeletedDir} = find_entry(?SCAN_PATH, ?NEW_DIR),
-    ?assertEqual(ExistingFile#fs_entry{ deleted = true }, DeletedFile),
-    ?assertEqual(ExistingDir#fs_entry{ deleted = true }, DeletedDir),
-    ?assertEqual(0, tfsp_fs_scanner:check_deleted()).
+    ?assertEqual(2, tfsp_scanner:check_deleted()),
+    {ok, DeletedFile} = find_ent(?SCAN_PATH, ?NEW_FILE),
+    {ok, DeletedDir} = find_ent(?SCAN_PATH, ?NEW_DIR),
+    ?assertEqual(ExistingFile#fs_ent{ deleted = true }, DeletedFile),
+    ?assertEqual(ExistingDir#fs_ent{ deleted = true }, DeletedDir),
+    ?assertEqual(0, tfsp_scanner:check_deleted()).
 
 
 %% Fixtures
 
 setup() ->
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 1000000),
-    ok = tfsp_fs_table:create().
+    del_file(?SCAN_PATH, ?NEW_FILE),
+    del_dir(?SCAN_PATH, ?NEW_DIR),
+    ok = fs_ent_tab:create().
 
 cleanup(_) ->
     del_file(?SCAN_PATH, ?NEW_FILE),
     del_dir(?SCAN_PATH, ?NEW_DIR),
-    ok = tfsp_fs_table:delete().
+    ok = fs_ent_tab:delete().
 
 
 %% Utilities
@@ -158,8 +160,8 @@ del_file(Dir, Filename) ->
 del_dir(Dir, Filename) ->
     file:del_dir(filename:join(Dir, Filename)).
 
-find_entry(Dir, Filename) ->
-    tfsp_fs_table:find(filename:join(Dir, Filename)).
+find_ent(Dir, Filename) ->
+    fs_ent_tab:find(filename:join(Dir, Filename)).
 
 set_mtime(Dir, Filename, Mtime) ->
     FileInfo = #file_info{ mtime = Mtime },

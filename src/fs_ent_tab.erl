@@ -1,6 +1,6 @@
-%%% Module for interfacing with the in-memory file system entry table.
+%%% Module for interfacing with the in-memory file system entity table.
 
--module(tfsp_fs_table).
+-module(fs_ent_tab).
 -export([create/0,
          delete/0,
 
@@ -10,7 +10,7 @@
 
          count/0]).
 
--include("fs_entry.hrl").
+-include("fs_ent.hrl").
 
 
 %% Specs
@@ -18,8 +18,8 @@
 -spec create() -> atom().
 -spec delete() -> ok.
 
--spec insert(fs_entry()) -> ok.
--spec find(file:path()) -> {ok, fs_entry()} | none.
+-spec insert(fs_ent()) -> ok.
+-spec find(file:path()) -> {ok, fs_ent()} | none.
 -spec remove(file:path()) -> ok.
 
 -spec count() -> non_neg_integer().
@@ -32,7 +32,7 @@ create() ->
     ?MODULE = ets:new(?MODULE, [ordered_set,
                                 public,
                                 named_table,
-                                {keypos, #fs_entry.path}]),
+                                {keypos, #fs_ent.path}]),
     ok.
 
 % Deletes the table.
@@ -40,16 +40,16 @@ delete() ->
     true = ets:delete(?MODULE),
     ok.
 
-% Inserts or updates a file entry in the table.
-insert(Entry) ->
-    true = ets:insert(?MODULE, Entry),
+% Inserts or updates a file entity in the table.
+insert(Ent) ->
+    true = ets:insert(?MODULE, Ent),
     ok.
 
-% Finds a file entry from the table with the given path.
+% Finds a file entity from the table with the given path.
 find(Path) ->
     case ets:lookup(?MODULE, Path) of
         [] -> none;
-        [Entry] -> {ok, Entry}
+        [Ent] -> {ok, Ent}
     end.
 
 remove(Path) ->

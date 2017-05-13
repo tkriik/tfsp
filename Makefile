@@ -1,11 +1,11 @@
 OBJ=            ebin/bitset.beam \
 		ebin/bitset_tests.beam \
-		ebin/tfsp_fs_entry.beam \
-		ebin/tfsp_fs_entry_tests.beam \
-		ebin/tfsp_fs_scanner.beam \
-		ebin/tfsp_fs_scanner_tests.beam \
-		ebin/tfsp_fs_table.beam \
-                ebin/tfsp_fs_table_tests.beam
+		ebin/fs_ent.beam \
+		ebin/fs_ent_tests.beam \
+		ebin/tfsp_scanner.beam \
+		ebin/tfsp_scanner_tests.beam \
+		ebin/fs_ent_tab.beam \
+                ebin/fs_ent_tab_tests.beam
 
 ERL=		erl
 ERLC=		erlc
@@ -20,34 +20,34 @@ test: $(OBJ)
 	       -eval 'case eunit:test([{dir, "ebin/"}], [verbose]) of error -> init:stop(1); Result -> Result end.' \
 	       -s init stop
 
-ebin/bitset.beam:		src/bitset.erl
+ebin/bitset.beam: src/bitset.erl
 	$(ERLC) $(EFLAGS) src/bitset.erl
 
-ebin/bitset_tests.beam:		test/bitset_tests.erl
+ebin/bitset_tests.beam:	test/bitset_tests.erl
 	$(ERLC) $(EFLAGS) test/bitset_tests.erl
 
-ebin/tfsp_fs_entry.beam:	include/fs_entry.hrl \
-				src/tfsp_fs_entry.erl
-	$(ERLC) $(EFLAGS) src/tfsp_fs_entry.erl
+ebin/fs_ent.beam: include/fs_ent.hrl \
+		  src/fs_ent.erl
+	$(ERLC) $(EFLAGS) src/fs_ent.erl
 
-ebin/tfsp_fs_entry_tests.beam: test/tfsp_fs_entry_tests.erl
-	$(ERLC) $(EFLAGS) test/tfsp_fs_entry_tests.erl
+ebin/fs_ent_tests.beam: test/fs_ent_tests.erl
+	$(ERLC) $(EFLAGS) test/fs_ent_tests.erl
 
-ebin/tfsp_fs_scanner.beam:	include/fs_entry.hrl \
-				src/tfsp_fs_entry.erl \
-				src/tfsp_fs_table.erl \
-				src/tfsp_fs_scanner.erl
-	$(ERLC) $(EFLAGS) src/tfsp_fs_scanner.erl
+ebin/tfsp_scanner.beam:	include/fs_ent.hrl \
+			src/fs_ent.erl \
+			src/fs_ent_tab.erl \
+			src/tfsp_scanner.erl
+	$(ERLC) $(EFLAGS) src/tfsp_scanner.erl
 
-ebin/tfsp_fs_scanner_tests.beam: test/tfsp_fs_scanner_tests.erl
-	$(ERLC) $(EFLAGS) test/tfsp_fs_scanner_tests.erl
+ebin/tfsp_scanner_tests.beam: test/tfsp_scanner_tests.erl
+	$(ERLC) $(EFLAGS) test/tfsp_scanner_tests.erl
 
-ebin/tfsp_fs_table.beam:	include/fs_entry.hrl \
-				src/tfsp_fs_table.erl
-	$(ERLC) $(EFLAGS) src/tfsp_fs_table.erl
+ebin/fs_ent_tab.beam: include/fs_ent.hrl \
+		      src/fs_ent_tab.erl
+	$(ERLC) $(EFLAGS) src/fs_ent_tab.erl
 
-ebin/tfsp_fs_table_tests.beam: test/tfsp_fs_table_tests.erl
-	$(ERLC) $(EFLAGS) test/tfsp_fs_table_tests.erl
+ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl
+	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
 
 .PHONY: clean
 

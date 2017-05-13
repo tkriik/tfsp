@@ -1,11 +1,11 @@
-%%% Module for scanning and updating file system metadata entries.
+%%% Module for scanning and updating file system metadata entities.
 
--module(tfsp_fs_entry).
+-module(fs_ent).
 -export([build/1]).
 
 -include_lib("kernel/include/file.hrl").
 
--include("fs_entry.hrl").
+-include("fs_ent.hrl").
 
 %% Defines
 
@@ -14,12 +14,12 @@
 
 %% Specs
 
--spec build(file:path()) -> {ok, fs_entry()} | {error, Reason :: any()}.
+-spec build(file:path()) -> {ok, fs_ent()} | {error, Reason :: any()}.
 
 
 %% API
 
-% Builds a new file system entry from the file/directory
+% Builds a new file system entity from the file/directory
 % at the given path.
 build(Path) ->
     case file:read_link_info(Path, [{time, posix}]) of
@@ -35,14 +35,14 @@ build(Path, #file_info{ size = Size,
                         access = Access,
                         mtime = Mtime }) ->
     case Type of
-        regular -> build_regular_entry(Path, Size, Access, Mtime);
-        directory -> build_directory_entry(Path, Access, Mtime);
+        regular -> build_regular_ent(Path, Size, Access, Mtime);
+        directory -> build_directory_ent(Path, Access, Mtime);
         _ -> {error, {invalid_type, Type}}
     end.
 
-build_regular_entry(Path, Size, Access, Mtime) ->
+build_regular_ent(Path, Size, Access, Mtime) ->
     Hash = build_hash(Path),
-    {ok, #fs_entry{ path = Path,
+    {ok, #fs_ent{ path = Path,
                     hash = Hash,
                     size = Size,
                     type = regular,
@@ -50,8 +50,8 @@ build_regular_entry(Path, Size, Access, Mtime) ->
                     mtime = Mtime,
                     deleted = false }}.
 
-build_directory_entry(Path, Access, Mtime) ->
-    {ok, #fs_entry{ path = Path,
+build_directory_ent(Path, Access, Mtime) ->
+    {ok, #fs_ent{ path = Path,
                     type = directory,
                     access = Access,
                     mtime = Mtime,

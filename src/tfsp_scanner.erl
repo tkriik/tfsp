@@ -1,10 +1,10 @@
-%%% File system entry scanner worker module.
+%%% File system entity scanner worker module.
 %%% Recursively scans directory trees and stores
-%%% each entry in tfsp_fs_table. It also uses the
+%%% each entity in fs_ent_tab. It also uses the
 %%% table to avoid scanning already existing entries,
 %%% unless their modification time has changed.
 
--module(tfsp_fs_scanner).
+-module(tfsp_scanner).
 
 -export([start_link/1]).
 
@@ -15,7 +15,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--include("fs_entry.hrl").
+-include("fs_ent.hrl").
 
 %% Specs
 
@@ -25,13 +25,13 @@
 -spec loop(non_neg_integer(), [re:mp()]) -> none().
 
 -spec scan(file:path(), [re:mp()]) -> non_neg_integer().
--spec scan_entry(file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
--spec update_entry(file:path(), [re:mp()], fs_entry()) -> non_neg_integer().
--spec create_entry(file:path(), [re:mp()]) -> non_neg_integer().
+-spec scan_ent(file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
+-spec update_ent(file:path(), [re:mp()], fs_ent()) -> non_neg_integer().
+-spec create_ent(file:path(), [re:mp()]) -> non_neg_integer().
 
 -spec check_deleted() -> non_neg_integer().
--spec fold_delete(fs_entry(), non_neg_integer()) -> non_neg_integer().
--spec mark_deleted(fs_entry()) -> ok.
+-spec fold_delete(fs_ent(), non_neg_integer()) -> non_neg_integer().
+-spec mark_deleted(fs_ent()) -> ok.
 
 
 %% API
@@ -69,7 +69,7 @@ scan(Path, IgnoreRes) ->
     FullPaths = lists:map(with_path(Path), Filenames),
     AllowedPaths = lists:filter(is_path_allowed_with(IgnoreRes), FullPaths),
     lists:foldl(fun(Filename, Acc) ->
-                        scan_entry(Filename, IgnoreRes, Acc)
+                        scan_ent(Filename, IgnoreRes, Acc)
                 end, 0, AllowedPaths).
 
 with_path(Path) ->
@@ -93,22 +93,22 @@ is_path_allowed(Path, [IgnoreRe | IgnoreRes]) ->
         {match, _} -> false
     end.
 
-% Scans a new entry if it does not exist in the fs table.
+% Scans a new entity if it does not exist in the fs table.
 % If it exists, only rescans if modification time is greater
 % than stored. The accumulator stores the number of entries
 % scanned, used for a more efficient traversal with fold in scan/1.
-scan_entry(Filename, IgnoreRes, Acc) ->
-    case tfsp_fs_table:find(Filename) of
-        {ok, Entry} ->
-            Acc + update_entry(Filename, IgnoreRes, Entry);
+scan_ent(Filename, IgnoreRes, Acc) ->
+    case fs_ent_tab:find(Filename) of
+        {ok, Ent} ->
+            Acc + update_ent(Filename, IgnoreRes, Ent);
         none ->
-            Acc + create_entry(Filename, IgnoreRes)
+            Acc + create_ent(Filename, IgnoreRes)
     end.
 
-update_entry(Filename, IgnoreRes, #fs_entry{ type = Type, mtime = OldMtime }) ->
+update_ent(Filename, IgnoreRes, #fs_ent{ type = Type, mtime = OldMtime }) ->
     {ok, #file_info{ mtime = CurMtime }} = file:read_link_info(Filename, [{time, posix}]),
     Acc = case OldMtime < CurMtime of
-        true -> create_entry(Filename, []);
+        true -> create_ent(Filename, []);
         false -> 0
     end,
     case Type of
@@ -116,18 +116,18 @@ update_entry(Filename, IgnoreRes, #fs_entry{ type = Type, mtime = OldMtime }) ->
         _ -> Acc
     end.
 
-create_entry(Filename, IgnoreRes) ->
-    case tfsp_fs_entry:build(Filename) of
-        {ok, Entry} ->
-            ok = tfsp_fs_table:insert(Entry),
-            case Entry#fs_entry.type of
+create_ent(Filename, IgnoreRes) ->
+    case fs_ent:build(Filename) of
+        {ok, Ent} ->
+            ok = fs_ent_tab:insert(Ent),
+            case Ent#fs_ent.type of
                 regular -> 1;
                 directory -> 1 + scan(Filename, IgnoreRes) % recurse if directory
             end;
         {error, _Reason} ->
             % ignore files that we can't access for whatever reason
             % error_logger:error_msg("Not adding file ~s due to error: ~p~n", [Filename, Reason]),
-            tfsp_fs_table:remove(Filename), % Delete old entry if it exists
+            fs_ent_tab:remove(Filename), % Delete old entity if it exists
             0
     end.
 
@@ -139,22 +139,22 @@ create_entry(Filename, IgnoreRes) ->
 % Those that don't get their 'deleted' flag set to true.
 % Returns the number of entries marked deleted.
 check_deleted() ->
-    ets:foldl(fun fold_delete/2, 0, tfsp_fs_table).
+    ets:foldl(fun fold_delete/2, 0, fs_ent_tab).
 
-fold_delete(#fs_entry{ path = Path, deleted = Deleted } = Entry, NumDeleted) ->
+fold_delete(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
     case Deleted of
         true -> NumDeleted;
         false -> case file:read_link_info(Path) of
                      {error, enoent} ->
-                         mark_deleted(Entry),
+                         mark_deleted(Ent),
                          NumDeleted + 1;
                      {error, enotdir} ->
-                         mark_deleted(Entry),
+                         mark_deleted(Ent),
                          NumDeleted + 1;
                      _ ->
                          NumDeleted
                  end
     end.
 
-mark_deleted(Entry) ->
-    ok = tfsp_fs_table:insert(Entry#fs_entry{ deleted = true }).
+mark_deleted(Ent) ->
+    ok = fs_ent_tab:insert(Ent#fs_ent{ deleted = true }).

@@ -1,11 +1,11 @@
-%%% File system entry scan and update tests
+%%% File system entity scan and update tests
 
--module(tfsp_fs_entry_tests).
+-module(fs_ent_tests).
 
 -include_lib("kernel/include/file.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--include("fs_entry.hrl").
+-include("fs_ent.hrl").
 
 %% Defines
 
@@ -18,7 +18,7 @@
 %% Main test
 
 module_test_() ->
-    {"File entry construction",
+    {"File entity construction",
      [{"with valid files",
        [{"small file", fun with_small_file/0},
         {"large file", fun with_large_file/0},
@@ -71,19 +71,19 @@ with_nonexistent() ->
     with_error(filename:join(?DATA_DIR, "NONEXISTENT"), enoent).
 
 with_file(Path, Hash, Size, Type, Access, Mtime, Deleted) ->
-    Result = tfsp_fs_entry:build(Path),
+    Result = fs_ent:build(Path),
     ?assertMatch({ok, _}, Result),
-    {ok, Entry} = Result,
-    ?assertEqual(Path, Entry#fs_entry.path),
-    ?assertEqual(Hash, Entry#fs_entry.hash),
-    ?assertEqual(Size, Entry#fs_entry.size),
-    ?assertEqual(Type, Entry#fs_entry.type),
-    ?assertEqual(Access, Entry#fs_entry.access),
-    ?assertEqual(Mtime, Entry#fs_entry.mtime),
-    ?assertEqual(Deleted, Entry#fs_entry.deleted).
+    {ok, Ent} = Result,
+    ?assertEqual(Path, Ent#fs_ent.path),
+    ?assertEqual(Hash, Ent#fs_ent.hash),
+    ?assertEqual(Size, Ent#fs_ent.size),
+    ?assertEqual(Type, Ent#fs_ent.type),
+    ?assertEqual(Access, Ent#fs_ent.access),
+    ?assertEqual(Mtime, Ent#fs_ent.mtime),
+    ?assertEqual(Deleted, Ent#fs_ent.deleted).
 
 with_error(Path, Reason) ->
-    Result = tfsp_fs_entry:build(Path),
+    Result = fs_ent:build(Path),
     ?assertMatch({error, _}, Result),
     ?assertEqual(element(2, Result), Reason).
 

@@ -34,7 +34,8 @@
 
 start(Port, SystemDir, UserDir) ->
     % TODO: log
-    SshOpts = [{subsystems, [{?MODULE, {?MODULE, []}}]},
+    SubsystemSpec = {erlang:atom_to_list(?MODULE), {?MODULE, []}},
+    SshOpts = [{subsystems, [SubsystemSpec]},
                {ssh_cli, no_cli},
                {system_dir, SystemDir},
                {user_dir, UserDir},

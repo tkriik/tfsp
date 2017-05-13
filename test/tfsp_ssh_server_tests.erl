@@ -19,13 +19,18 @@
 
 module_test_() ->
     {"Tests for the tfsp SSH server module interface",
-     [{"server setup and teardown",
-       {setup, fun app_setup/0, fun test_start_stop/0}
-      },
-      {"SSH client connection setup and teardown",
-       {setup, fun setup/0, fun cleanup/1, fun test_connection/0}
-      }
-     ]
+     [daemon_tests(),
+      conn_tests()]}.
+
+daemon_tests() ->
+    {setup, fun app_setup/0,
+     {"daemon setup and teardown", fun test_start_stop/0}}.
+
+conn_tests() ->
+    {setup, fun setup/0, fun cleanup/1,
+     [{"connection setup and teardown", fun test_connection/0},
+      {"channel setup and teardown", fun test_channel/0},
+      {"subsystem execution request", fun test_subsystem/0}]
     }.
 
 
@@ -38,14 +43,24 @@ test_start_stop() ->
     ?assertEqual(ok, tfsp_ssh_server:stop(DaemonRef)).
 
 test_connection() ->
-    Opts = [{user_dir, ?CLIENT_USER_DIR},
-            {user_interaction, false},
-            {silently_accept_hosts, true},
-            {user, "ssh_client"}],
-    Res = ssh:connect(?HOST, ?PORT, Opts, 1000),
+    Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
     ?assertMatch({ok, _}, Res),
     {ok, ConnRef} = Res,
     ?assertEqual(ok, ssh:close(ConnRef)).
+
+test_channel() ->
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
+    Res = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
+    ?assertMatch({ok, _}, Res),
+    {ok, ChanId} = Res,
+    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)).
+
+test_subsystem() ->
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
+    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
+    ?assertEqual(success, Res),
+    ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)).
 
 
 %% Fixtures
@@ -54,10 +69,17 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
-    app_setup(),
     {ok, DaemonRef} = tfsp_ssh_server:start(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     DaemonRef.
 
 cleanup(DaemonRef) ->
     _ = file:delete(?CLIENT_KNOWN_HOSTS),
     ok = tfsp_ssh_server:stop(DaemonRef).
+
+%% Utilities
+
+client_ssh_opts() ->
+    [{user_dir, ?CLIENT_USER_DIR},
+     {user_interaction, false},
+     {silently_accept_hosts, true},
+     {user, "ssh_client"}].

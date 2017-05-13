@@ -9,7 +9,7 @@
 
 %% Defines
 
--define(DATA_DIR, <<"test/data/">>).
+-define(DATA_DIR, <<"test/data/scan/">>).
 -define(SMALL_FILE, <<"LICENSE.txt">>).
 -define(LARGE_FILE, <<"pelican.jpg">>).
 -define(SYMLINK_FILE, <<"symlink">>).

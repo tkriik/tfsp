@@ -7,7 +7,7 @@
 
 -include("fs_ent.hrl").
 
--define(SCAN_PATH, <<"test/data/">>).
+-define(SCAN_PATH, <<"test/data/scan/">>).
 -define(MODIFIED_FILE, <<"nested/LICENSE_COPY.txt">>).
 -define(NEW_DIR, <<"new/">>).
 -define(NEW_FILE, <<"new_file">>).

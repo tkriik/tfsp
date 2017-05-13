@@ -27,18 +27,16 @@ module_test_() ->
     }.
 
 scan_tests() ->
-    {"scanning existing files",
-     {foreach,
-      fun setup/0,
-      fun cleanup/1,
-      [{"once", fun scan_once/0},
-       {"once with ignored regexp list", fun scan_once_ignore/0},
-       {"twice", fun scan_twice/0},
-       {"twice with 1 modified", fun scan_twice_modify/0},
-       {"twice with 2 files created", fun scan_twice_create/0},
-       {"twice with 2 files created and 1 modified", fun scan_twice_create_modify/0}
-      ]
-     }
+    {foreach,
+     fun setup/0,
+     fun cleanup/1,
+     [{"once", fun scan_once/0},
+      {"once with ignored regexp list", fun scan_once_ignore/0},
+      {"twice", fun scan_twice/0},
+      {"twice with 1 modified", fun scan_twice_modify/0},
+      {"twice with 2 files created", fun scan_twice_create/0},
+      {"twice with 2 files created and 1 modified", fun scan_twice_create_modify/0}
+     ]
     }.
 
 deleted_tests() ->

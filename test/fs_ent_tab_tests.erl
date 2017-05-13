@@ -16,21 +16,19 @@
 %% Main test
 
 module_test_() ->
-    {"Verifies that the file system entity module interface "
-     "works as expected.",
-     {foreach,
-      fun setup/0,
-      fun cleanup/1,
-      [{"inserting new entity once", fun insert_once/0},
-       {"inserting same entity twice", fun insert_same_twice/0},
-       {"inserting different entity twice", fun insert_different_twice/0},
-       {"inserting and removing entity", fun insert_remove/0},
-       {"finding nonexistent entity", fun find_nonexistent/0},
-       {"finding new entity", fun find_new/0},
-       {"finding updated entity", fun find_updated/0},
-       {"finding removed entity", fun find_removed/0}
-      ]
-     }
+    {"file system entity table interface",
+     {foreach, local, fun setup/0, fun cleanup/1,
+      [fun empty_table/1,
+       fun insert/1,
+       fun insert_one/1,
+       fun insert_same_twice/1,
+       fun insert_different_twice/1,
+       fun remove/1,
+       fun remove_one/1,
+       fun find_nonexistent/1,
+       fun find_new/1,
+       fun find_updated/1,
+       fun find_removed/1]}
     }.
 
 %% Fixtures
@@ -44,45 +42,60 @@ cleanup(_) ->
 
 %% Tests
 
-insert_once() ->
-    ?assertEqual(fs_ent_tab:count(), 0),
-    ?assert(fs_ent_tab:insert(?ENT_A0) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 1).
+empty_table(_) ->
+    {"empty table count",
+     [?_assertEqual(0, fs_ent_tab:count())]}.
 
-insert_same_twice() ->
-    ?assertEqual(fs_ent_tab:count(), 0),
-    ?assert(fs_ent_tab:insert(?ENT_A0) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 1),
-    ?assert(fs_ent_tab:insert(?ENT_A1) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 1).
+insert(_) ->
+    {"insert succeeds",
+     [?_assertEqual(ok, fs_ent_tab:insert(?ENT_A0))]}.
 
-insert_different_twice() ->
-    ?assertEqual(fs_ent_tab:count(), 0),
-    ?assert(fs_ent_tab:insert(?ENT_A0) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 1),
-    ?assert(fs_ent_tab:insert(?ENT_B0) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 2).
+insert_one(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    {"one insert",
+     [?_assertEqual(fs_ent_tab:count(), 1)]}.
 
-insert_remove() ->
-    ?assertEqual(fs_ent_tab:count(), 0),
-    ?assert(fs_ent_tab:insert(?ENT_A0) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 1),
-    ?assert(fs_ent_tab:remove(<<"A">>) =:= ok),
-    ?assertEqual(fs_ent_tab:count(), 0).
+insert_same_twice(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    ok = fs_ent_tab:insert(?ENT_A0),
+    {"count after duplicate insertion",
+     [?_assertEqual(1, fs_ent_tab:count())]}.
 
-find_nonexistent() ->
-    ?assert(fs_ent_tab:find(<<"A">>) =:= none).
+insert_different_twice(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    ok = fs_ent_tab:insert(?ENT_B0),
+    {"count after two different insertions",
+     [?_assertEqual(2, fs_ent_tab:count())]}.
 
-find_new() ->
-    fs_ent_tab:insert(?ENT_A0),
-    ?assertEqual(fs_ent_tab:find(<<"A">>), {ok, ?ENT_A0}).
+remove(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    {"remove succeeds",
+     [?_assertEqual(ok, fs_ent_tab:remove(<<"A">>))]}.
 
-find_updated() ->
-    fs_ent_tab:insert(?ENT_A0),
-    fs_ent_tab:insert(?ENT_A1),
-    ?assertEqual(fs_ent_tab:find(<<"A">>), {ok, ?ENT_A1}).
+remove_one(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    ok = fs_ent_tab:insert(?ENT_B0),
+    ok = fs_ent_tab:remove(<<"A">>),
+    {"count after one removal",
+     [?_assertEqual(1, fs_ent_tab:count())]}.
 
-find_removed() ->
-    fs_ent_tab:insert(?ENT_A0),
-    fs_ent_tab:remove(<<"A">>),
-    ?assert(fs_ent_tab:find(<<"A">>) =:= none).
+find_nonexistent(_) ->
+    {"finding non-existent entity",
+     [?_assertEqual(none, fs_ent_tab:find(<<"A">>))]}.
+
+find_new(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    {"finding new entity",
+     [?_assertEqual({ok, ?ENT_A0}, fs_ent_tab:find(<<"A">>))]}.
+
+find_updated(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    ok = fs_ent_tab:insert(?ENT_A1),
+    {"finding updated entity",
+     [?_assertEqual({ok, ?ENT_A1}, fs_ent_tab:find(<<"A">>))]}.
+
+find_removed(_) ->
+    ok = fs_ent_tab:insert(?ENT_A0),
+    ok = fs_ent_tab:remove(<<"A">>),
+    {"finding removed entity",
+     [?_assertEqual(none, fs_ent_tab:find(<<"A">>))]}.

@@ -9,8 +9,8 @@
 -export([start_link/1]).
 
 -ifdef(TFSP_TEST).
--export([scan/2,
-         check_deleted/0]).
+-export([scan/3,
+         check_deleted/1]).
 -endif.
 
 -include_lib("kernel/include/file.hrl").
@@ -22,16 +22,15 @@
 -spec start_link([term()]) -> pid().
 
 -spec init([term()]) -> none().
--spec loop(non_neg_integer(), [re:mp()]) -> none().
+-spec loop(fs_ent_tab:handle(), non_neg_integer(), [re:mp()]) -> none().
 
--spec scan(file:path(), [re:mp()]) -> non_neg_integer().
--spec scan_ent(file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
--spec update_ent(file:path(), [re:mp()], fs_ent()) -> non_neg_integer().
--spec create_ent(file:path(), [re:mp()]) -> non_neg_integer().
+-spec scan(fs_ent_tab:handle(), file:path(), [re:mp()]) -> non_neg_integer().
+-spec scan_ent(fs_ent_tab:handle(), file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
+-spec update_ent(fs_ent_tab:handle(), file:path(), [re:mp()], fs_ent()) -> non_neg_integer().
+-spec create_ent(fs_ent_tab:handle(), file:path(), [re:mp()]) -> non_neg_integer().
 
--spec check_deleted() -> non_neg_integer().
--spec fold_delete(fs_ent(), non_neg_integer()) -> non_neg_integer().
--spec mark_deleted(fs_ent()) -> ok.
+-spec check_deleted(fs_ent_tab:handle()) -> non_neg_integer().
+-spec mark_deleted(fs_ent_tab:handle(), fs_ent()) -> ok.
 
 
 %% API
@@ -39,37 +38,37 @@
 % Spawns a new scanner worker with the given root path,
 % interval in seconds, and a list of regexes for ignoring
 % certain file name patterns.
-start_link([Path, Interval, IgnoreRes]) ->
-    spawn_link(?MODULE, init, [Path, Interval, IgnoreRes]).
+start_link([Table, Path, Interval, IgnoreRes]) ->
+    spawn_link(?MODULE, init, [Table, Path, Interval, IgnoreRes]).
 
 
 %% Utilities
 
 % Initialization before loop
-init([Path, Interval, IgnoreRes]) ->
+init([Table, Path, Interval, IgnoreRes]) ->
     ok = file:set_cwd(Path),
-    loop(Interval, IgnoreRes).
+    loop(Table, Interval, IgnoreRes).
 
 % Main loop
-loop(Interval, IgnoreRes) ->
+loop(Table, Interval, IgnoreRes) ->
     timer:send_after(Interval * 1000, again),
-    _NumScanned = scan(<<"./">>, IgnoreRes),
-    _NumDeleted = check_deleted(),
+    _NumScanned = scan(Table, <<"./">>, IgnoreRes),
+    _NumDeleted = check_deleted(Table),
     receive
-        again -> loop(Interval, IgnoreRes);
-        Other -> error_logger:error_msg("Unknown message: ~p~n", [Other])
+        again -> loop(Table, Interval, IgnoreRes);
+        Other -> error_logger:error_msg("Unknown message: ~p~n", [Other]) % TODO: handle this better
     end.
 
 
 %% Scanning
 
 % Main scan routine. Returns the number of entries built.
-scan(Path, IgnoreRes) ->
+scan(Table, Path, IgnoreRes) ->
     {ok, Filenames} = file:list_dir(Path),
     FullPaths = lists:map(with_path(Path), Filenames),
     AllowedPaths = lists:filter(is_path_allowed_with(IgnoreRes), FullPaths),
     lists:foldl(fun(Filename, Acc) ->
-                        scan_ent(Filename, IgnoreRes, Acc)
+                        scan_ent(Table, Filename, IgnoreRes, Acc)
                 end, 0, AllowedPaths).
 
 with_path(Path) ->
@@ -97,37 +96,38 @@ is_path_allowed(Path, [IgnoreRe | IgnoreRes]) ->
 % If it exists, only rescans if modification time is greater
 % than stored. The accumulator stores the number of entries
 % scanned, used for a more efficient traversal with fold in scan/1.
-scan_ent(Filename, IgnoreRes, Acc) ->
-    case fs_ent_tab:find(Filename) of
+scan_ent(Table, Filename, IgnoreRes, Acc) ->
+    case fs_ent_tab:find(Table, Filename) of
         {ok, Ent} ->
-            Acc + update_ent(Filename, IgnoreRes, Ent);
+            Acc + update_ent(Table, Filename, IgnoreRes, Ent);
         none ->
-            Acc + create_ent(Filename, IgnoreRes)
+            Acc + create_ent(Table, Filename, IgnoreRes)
     end.
 
-update_ent(Filename, IgnoreRes, #fs_ent{ type = Type, mtime = OldMtime }) ->
+update_ent(Table, Filename, IgnoreRes, #fs_ent{ type = Type,
+                                                mtime = OldMtime }) ->
     {ok, #file_info{ mtime = CurMtime }} = file:read_link_info(Filename, [{time, posix}]),
     Acc = case OldMtime < CurMtime of
-        true -> create_ent(Filename, []);
+        true -> create_ent(Table, Filename, []);
         false -> 0
     end,
     case Type of
-        directory -> Acc + scan(Filename, IgnoreRes); % recurse if directory
+        directory -> Acc + scan(Table, Filename, IgnoreRes); % recurse if directory
         _ -> Acc
     end.
 
-create_ent(Filename, IgnoreRes) ->
+create_ent(Table, Filename, IgnoreRes) ->
     case fs_ent:build(Filename) of
         {ok, Ent} ->
-            ok = fs_ent_tab:insert(Ent),
+            ok = fs_ent_tab:insert(Table, Ent),
             case Ent#fs_ent.type of
                 regular -> 1;
-                directory -> 1 + scan(Filename, IgnoreRes) % recurse if directory
+                directory -> 1 + scan(Table, Filename, IgnoreRes) % recurse if directory
             end;
         {error, _Reason} ->
             % ignore files that we can't access for whatever reason
             % error_logger:error_msg("Not adding file ~s due to error: ~p~n", [Filename, Reason]),
-            fs_ent_tab:remove(Filename), % Delete old entity if it exists
+            fs_ent_tab:remove(Table, Filename), % Delete old entity if it exists
             0
     end.
 
@@ -138,23 +138,22 @@ create_ent(Filename, IgnoreRes) ->
 % with their deleted flag not set whether they still exist.
 % Those that don't get their 'deleted' flag set to true.
 % Returns the number of entries marked deleted.
-check_deleted() ->
-    ets:foldl(fun fold_delete/2, 0, fs_ent_tab).
+check_deleted({fs_ent_tab, Tid} = Table) -> % TODO: refactor
+    ets:foldl(fun(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
+                      case Deleted of
+                          true -> NumDeleted;
+                          false -> case file:read_link_info(Path) of
+                                       {error, enoent} ->
+                                           mark_deleted(Table, Ent),
+                                           NumDeleted + 1;
+                                       {error, enotdir} ->
+                                           mark_deleted(Table, Ent),
+                                           NumDeleted + 1;
+                                       _ ->
+                                           NumDeleted
+                                   end
+                      end
+              end, 0, Tid).
 
-fold_delete(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
-    case Deleted of
-        true -> NumDeleted;
-        false -> case file:read_link_info(Path) of
-                     {error, enoent} ->
-                         mark_deleted(Ent),
-                         NumDeleted + 1;
-                     {error, enotdir} ->
-                         mark_deleted(Ent),
-                         NumDeleted + 1;
-                     _ ->
-                         NumDeleted
-                 end
-    end.
-
-mark_deleted(Ent) ->
-    ok = fs_ent_tab:insert(Ent#fs_ent{ deleted = true }).
+mark_deleted(Table, Ent) ->
+    ok = fs_ent_tab:insert(Table, Ent#fs_ent{ deleted = true }).

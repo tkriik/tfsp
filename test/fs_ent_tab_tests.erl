@@ -34,68 +34,68 @@ module_test_() ->
 %% Fixtures
 
 setup() ->
-    ok = fs_ent_tab:create().
+    fs_ent_tab:create().
 
-cleanup(_) ->
-    ok = fs_ent_tab:delete().
+cleanup(Table) ->
+    ok = fs_ent_tab:delete(Table).
 
 
 %% Tests
 
-empty_table(_) ->
+empty_table(Table) ->
     {"empty table count",
-     [?_assertEqual(0, fs_ent_tab:count())]}.
+     [?_assertEqual(0, fs_ent_tab:count(Table))]}.
 
-insert(_) ->
+insert(Table) ->
     {"insert succeeds",
-     [?_assertEqual(ok, fs_ent_tab:insert(?ENT_A0))]}.
+     [?_assertEqual(ok, fs_ent_tab:insert(Table, ?ENT_A0))]}.
 
-insert_one(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
+insert_one(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
     {"one insert",
-     [?_assertEqual(fs_ent_tab:count(), 1)]}.
+     [?_assertEqual(1, fs_ent_tab:count(Table))]}.
 
-insert_same_twice(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
-    ok = fs_ent_tab:insert(?ENT_A0),
+insert_same_twice(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
     {"count after duplicate insertion",
-     [?_assertEqual(1, fs_ent_tab:count())]}.
+     [?_assertEqual(1, fs_ent_tab:count(Table))]}.
 
-insert_different_twice(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
-    ok = fs_ent_tab:insert(?ENT_B0),
+insert_different_twice(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:insert(Table, ?ENT_B0),
     {"count after two different insertions",
-     [?_assertEqual(2, fs_ent_tab:count())]}.
+     [?_assertEqual(2, fs_ent_tab:count(Table))]}.
 
-remove(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
+remove(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
     {"remove succeeds",
-     [?_assertEqual(ok, fs_ent_tab:remove(<<"A">>))]}.
+     [?_assertEqual(ok, fs_ent_tab:remove(Table, <<"A">>))]}.
 
-remove_one(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
-    ok = fs_ent_tab:insert(?ENT_B0),
-    ok = fs_ent_tab:remove(<<"A">>),
+remove_one(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:insert(Table, ?ENT_B0),
+    ok = fs_ent_tab:remove(Table, <<"A">>),
     {"count after one removal",
-     [?_assertEqual(1, fs_ent_tab:count())]}.
+     [?_assertEqual(1, fs_ent_tab:count(Table))]}.
 
-find_nonexistent(_) ->
+find_nonexistent(Table) ->
     {"finding non-existent entity",
-     [?_assertEqual(none, fs_ent_tab:find(<<"A">>))]}.
+     [?_assertEqual(none, fs_ent_tab:find(Table, <<"A">>))]}.
 
-find_new(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
+find_new(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
     {"finding new entity",
-     [?_assertEqual({ok, ?ENT_A0}, fs_ent_tab:find(<<"A">>))]}.
+     [?_assertEqual({ok, ?ENT_A0}, fs_ent_tab:find(Table, <<"A">>))]}.
 
-find_updated(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
-    ok = fs_ent_tab:insert(?ENT_A1),
+find_updated(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:insert(Table, ?ENT_A1),
     {"finding updated entity",
-     [?_assertEqual({ok, ?ENT_A1}, fs_ent_tab:find(<<"A">>))]}.
+     [?_assertEqual({ok, ?ENT_A1}, fs_ent_tab:find(Table, <<"A">>))]}.
 
-find_removed(_) ->
-    ok = fs_ent_tab:insert(?ENT_A0),
-    ok = fs_ent_tab:remove(<<"A">>),
+find_removed(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:remove(Table, <<"A">>),
     {"finding removed entity",
-     [?_assertEqual(none, fs_ent_tab:find(<<"A">>))]}.
+     [?_assertEqual(none, fs_ent_tab:find(Table, <<"A">>))]}.

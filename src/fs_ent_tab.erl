@@ -2,62 +2,63 @@
 
 -module(fs_ent_tab).
 -export([create/0,
-         delete/0,
+         delete/1,
 
-         insert/1,
-         find/1,
-         remove/1,
+         insert/2,
+         find/2,
+         remove/2,
 
-         count/0]).
+         count/1]).
 
 -include("fs_ent.hrl").
 
 
 %% Specs
 
--spec create() -> atom().
--spec delete() -> ok.
+-type handle() :: {fs_ent_tab, ets:tid()}.
 
--spec insert(fs_ent()) -> ok.
--spec find(file:path()) -> {ok, fs_ent()} | none.
--spec remove(file:path()) -> ok.
+-export_type([handle/0]).
 
--spec count() -> non_neg_integer().
+-spec create() -> handle().
+-spec delete(handle()) -> ok.
+
+-spec insert(handle(), fs_ent()) -> ok.
+-spec find(handle(), file:path()) -> {ok, fs_ent()} | none.
+-spec remove(handle(), file:path()) -> ok.
+
+-spec count(handle()) -> non_neg_integer().
 
 
 %% API 
 
-% Creates the table.
+% Creates a table.
 create() ->
-    ?MODULE = ets:new(?MODULE, [ordered_set,
-                                public,
-                                named_table,
-                                {keypos, #fs_ent.path}]),
+    Tid = ets:new(?MODULE, [ordered_set, protected, {keypos, #fs_ent.path}]),
+    {fs_ent_tab, Tid}.
+
+% Deletes a table.
+delete({fs_ent_tab, Tid}) ->
+    true = ets:delete(Tid),
     ok.
 
-% Deletes the table.
-delete() ->
-    true = ets:delete(?MODULE),
-    ok.
-
-% Inserts or updates a file entity in the table.
-insert(Ent) ->
-    true = ets:insert(?MODULE, Ent),
+% Inserts or updates a file entity in a table.
+insert({fs_ent_tab, Tid}, Ent) ->
+    true = ets:insert(Tid, Ent),
     ok.
 
 % Finds a file entity from the table with the given path.
-find(Path) ->
-    case ets:lookup(?MODULE, Path) of
+find({fs_ent_tab, Tid}, Path) ->
+    case ets:lookup(Tid, Path) of
         [] -> none;
         [Ent] -> {ok, Ent}
     end.
 
-remove(Path) ->
-    true = ets:delete(?MODULE, Path),
+remove({fs_ent_tab, Tid}, Path) ->
+    true = ets:delete(Tid, Path),
     ok.
 
 % Returns the number of entries in the table.
-count() ->
-    InfoList = ets:info(?MODULE),
+count({fs_ent_tab, Tid}) ->
+    InfoList = ets:info(Tid),
     {size, Size} = proplists:lookup(size, InfoList),
     Size.

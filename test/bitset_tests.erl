@@ -61,4 +61,6 @@ test_popcount() ->
     B = bitset:set_at(0, A),
     ?assertEqual(1, bitset:popcount(B)),
     C = bitset:set_at(999, B),
-    ?assertEqual(2, bitset:popcount(C)).
+    ?assertEqual(2, bitset:popcount(C)),
+    D = bitset:set_at(999, C),
+    ?assertEqual(2, bitset:popcount(D)).

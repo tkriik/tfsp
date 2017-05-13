@@ -32,6 +32,6 @@ get_at(I, {_, Bitstring}) ->
     end(Bitstring).
 
 set_at(I, {Popcount, Bitstring}) ->
-    fun(<<L:I/bits, _:1, R/bits>>) ->
-            {Popcount + 1, <<L/bits, 1:1, R/bits>>} 
+    fun(<<L:I/bits, Bit:1, R/bits>>) ->
+            {Popcount + (Bit bxor 1), <<L/bits, 1:1, R/bits>>} 
     end(Bitstring).

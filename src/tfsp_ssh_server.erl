@@ -3,7 +3,7 @@
 -module(tfsp_ssh_server).
 -behaviour(ssh_daemon_channel).
 
--export([start/2,
+-export([start/3,
         stop/1]).
 
 -export([init/1,
@@ -21,7 +21,7 @@
 
 -type ssh_server_st() :: #ssh_server_st{}.
 
--spec start(non_neg_integer(), file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
+-spec start(non_neg_integer(), file:path(), file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
 -spec stop(ssh:ssh_daemon_ref()) -> ok.
 
 -spec init(term()) -> {ok, ssh_server_st()}.
@@ -32,11 +32,12 @@
 
 %% API
 
-start(Port, SystemDir) ->
+start(Port, SystemDir, UserDir) ->
     % TODO: log
     SshOpts = [{subsystems, [{?MODULE, {?MODULE, []}}]},
                {ssh_cli, no_cli},
                {system_dir, SystemDir},
+               {user_dir, UserDir},
                {auth_methods, "publickey"}],
     ssh:daemon(Port, SshOpts).
 

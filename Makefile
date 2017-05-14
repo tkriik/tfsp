@@ -41,18 +41,17 @@ ebin/fs_ent_tests.beam: test/fs_ent_tests.erl \
 			ebin/fs_ent.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tests.erl
 
-ebin/fs_ent_tab.beam: include/fs_ent.hrl \
-		      src/fs_ent_tab.erl
+ebin/fs_ent_tab.beam: src/fs_ent_tab.erl \
+		      ebin/fs_ent.beam
 	$(ERLC) $(EFLAGS) src/fs_ent_tab.erl
 
 ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 			    ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
 
-ebin/tfsp_scanner.beam:	include/fs_ent.hrl \
-			src/fs_ent.erl \
-			src/fs_ent_tab.erl \
-			src/tfsp_scanner.erl
+ebin/tfsp_scanner.beam:	src/tfsp_scanner.erl \
+			ebin/fs_ent.beam \
+			ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) src/tfsp_scanner.erl
 
 ebin/tfsp_scanner_tests.beam: test/tfsp_scanner_tests.erl \

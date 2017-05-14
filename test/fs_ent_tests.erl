@@ -67,12 +67,12 @@ with_symlink() ->
 with_nonexistent() ->
     with_error(filename:join(?DATA_DIR, "NONEXISTENT"), enoent).
 
-with_file(Path, Hash, Size, Type, Access, Mtime, Deleted) ->
+with_file(Path, Sha256, Size, Type, Access, Mtime, Deleted) ->
     Result = fs_ent:build(Path),
     ?assertMatch({ok, _}, Result),
     {ok, Ent} = Result,
     ?assertEqual(Path, Ent#fs_ent.path),
-    ?assertEqual(Hash, Ent#fs_ent.hash),
+    ?assertEqual(Sha256, Ent#fs_ent.sha256),
     ?assertEqual(Size, Ent#fs_ent.size),
     ?assertEqual(Type, Ent#fs_ent.type),
     ?assertEqual(Access, Ent#fs_ent.access),

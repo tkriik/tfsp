@@ -41,32 +41,32 @@ build(Path, #file_info{ size = Size,
     end.
 
 build_regular_ent(Path, Size, Access, Mtime) ->
-    Hash = build_hash(Path),
-    {ok, #fs_ent{ path = Path,
-                    hash = Hash,
-                    size = Size,
-                    type = regular,
-                    access = Access,
-                    mtime = Mtime,
-                    deleted = false }}.
+    Sha256 = build_sha256(Path),
+    {ok, #fs_ent{ path      = Path,
+                  sha256    = Sha256,
+                  size      = Size,
+                  type      = regular,
+                  access    = Access,
+                  mtime     = Mtime,
+                  deleted   = false }}.
 
 build_directory_ent(Path, Access, Mtime) ->
-    {ok, #fs_ent{ path = Path,
-                    type = directory,
-                    access = Access,
-                    mtime = Mtime,
-                    deleted = false }}.
+    {ok, #fs_ent{ path      = Path,
+                  type      = directory,
+                  access    = Access,
+                  mtime     = Mtime,
+                  deleted   = false }}.
 
-build_hash(Path) ->
+build_sha256(Path) ->
     {ok, IoDevice} = file:open(Path, [read, raw]),
-    Hash = build_hash(IoDevice, crypto:hash_init(sha256)),
+    Sha256 = build_sha256(IoDevice, crypto:hash_init(sha256)),
     ok = file:close(IoDevice),
-    Hash.
+    Sha256.
 
-build_hash(IoDevice, Ctx) ->
+build_sha256(IoDevice, Ctx) ->
     case file:read(IoDevice, ?HASH_BLOCK_SIZE) of
         eof ->
             crypto:hash_final(Ctx);
         {ok, Data} ->
-            build_hash(IoDevice, crypto:hash_update(Ctx, Data))
+            build_sha256(IoDevice, crypto:hash_update(Ctx, Data))
     end.

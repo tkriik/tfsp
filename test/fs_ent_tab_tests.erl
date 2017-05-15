@@ -4,13 +4,15 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("fs_ent.hrl").
+
 
 %% Mock entities
 
--define(ENT_A0, {fs_ent, <<"A">>, 0 }).
--define(ENT_A1, {fs_ent, <<"A">>, 1 }).
--define(ENT_B0, {fs_ent, <<"B">>, 0 }).
--define(ENT_B1, {fs_ent, <<"B">>, 1 }).
+-define(ENT_A0, #fs_ent{ path = <<"A">>, mtime = 0 }).
+-define(ENT_A1, #fs_ent{ path = <<"A">>, mtime = 1 }).
+-define(ENT_B0, #fs_ent{ path = <<"B">>, mtime = 0 }).
+-define(ENT_B1, #fs_ent{ path = <<"B">>, mtime = 1 }).
 
 
 %% Main test

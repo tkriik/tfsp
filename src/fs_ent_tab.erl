@@ -42,7 +42,8 @@ delete({fs_ent_tab, Tid}) ->
     ok.
 
 % Inserts or updates a file entity in a table.
-insert({fs_ent_tab, Tid}, Ent) ->
+insert({fs_ent_tab, Tid}, #fs_ent{ path = Path } = Ent) ->
+    ok = path:ensure_normalized_path(Path),
     true = ets:insert(Tid, Ent),
     ok.
 

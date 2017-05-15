@@ -1,7 +1,7 @@
 %%% Module for scanning and updating file system metadata entities.
 
 -module(fs_ent).
--export([build/1]).
+-export([build/2]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -14,34 +14,34 @@
 
 %% Specs
 
--spec build(file:path()) -> {ok, fs_ent()} | {error, Reason :: any()}.
+-spec build(file:path(), file:path()) -> {ok, fs_ent()} | {error, Reason :: any()}.
 
 
 %% API
 
 % Builds a new file system entity from the file/directory
-% at the given path.
-build(Path) ->
-    case file:read_link_info(Path, [{time, posix}]) of
-        {ok, FileInfo} -> build(Path, FileInfo);
+% at the given root dir and path.
+build(Root, Path) ->
+    case path:read_link_info(Root, Path) of
+        {ok, FileInfo} -> build(Root, Path, FileInfo);
         {error, Reason} -> {error, Reason}
     end.
 
 
 %% Utilities
 
-build(Path, #file_info{ size = Size,
-                        type = Type,
-                        access = Access,
-                        mtime = Mtime }) ->
+build(Root, Path, #file_info{ size = Size,
+                              type = Type,
+                              access = Access,
+                              mtime = Mtime }) ->
     case Type of
-        regular -> build_regular_ent(Path, Size, Access, Mtime);
-        directory -> build_directory_ent(Path, Access, Mtime);
+        regular -> build_regular_ent(Root, Path, Size, Access, Mtime);
+        directory -> build_directory_ent(Root, Path, Access, Mtime);
         _ -> {error, {invalid_type, Type}}
     end.
 
-build_regular_ent(Path, Size, Access, Mtime) ->
-    Sha256 = build_sha256(Path),
+build_regular_ent(Root, Path, Size, Access, Mtime) ->
+    Sha256 = build_sha256(Root, Path),
     {ok, #fs_ent{ path      = Path,
                   sha256    = Sha256,
                   size      = Size,
@@ -50,23 +50,23 @@ build_regular_ent(Path, Size, Access, Mtime) ->
                   mtime     = Mtime,
                   deleted   = false }}.
 
-build_directory_ent(Path, Access, Mtime) ->
+build_directory_ent(_Root, Path, Access, Mtime) ->
     {ok, #fs_ent{ path      = Path,
                   type      = directory,
                   access    = Access,
                   mtime     = Mtime,
                   deleted   = false }}.
 
-build_sha256(Path) ->
-    {ok, IoDevice} = file:open(Path, [read, raw]),
-    Sha256 = build_sha256(IoDevice, crypto:hash_init(sha256)),
+build_sha256(Root, Path) ->
+    {ok, IoDevice} = path:open(Root, Path, [read, raw]),
+    Sha256 = build_sha256_from_fd(IoDevice, crypto:hash_init(sha256)),
     ok = file:close(IoDevice),
     Sha256.
 
-build_sha256(IoDevice, Ctx) ->
+build_sha256_from_fd(IoDevice, Ctx) ->
     case file:read(IoDevice, ?HASH_BLOCK_SIZE) of
         eof ->
             crypto:hash_final(Ctx);
         {ok, Data} ->
-            build_sha256(IoDevice, crypto:hash_update(Ctx, Data))
+            build_sha256_from_fd(IoDevice, crypto:hash_update(Ctx, Data))
     end.

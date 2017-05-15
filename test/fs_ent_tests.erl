@@ -9,9 +9,10 @@
 
 %% Defines
 
--define(DATA_DIR, <<"test/data/scan/">>).
+-define(DATA_DIR, <<"test/data/scan">>).
 -define(SMALL_FILE, <<"LICENSE.txt">>).
 -define(LARGE_FILE, <<"pelican.jpg">>).
+-define(NESTED_DIR, <<"nested">>).
 -define(SYMLINK_FILE, <<"symlink">>).
 
 
@@ -34,7 +35,7 @@ module_test_() ->
 %% Tests
 
 with_small_file() ->
-    Path = filename:join(?DATA_DIR, ?SMALL_FILE),
+    Path = ?SMALL_FILE,
     set_mtime(Path, 1494221667),
     with_file(Path,
               <<131,41,250,6,40,66,164,44,119,157,178,254,125,150,165,27,169,
@@ -46,7 +47,7 @@ with_small_file() ->
               false).
 
 with_large_file() ->
-    Path = filename:join(?DATA_DIR, ?LARGE_FILE),
+    Path = ?LARGE_FILE,
     set_mtime(Path, 1494221667),
     with_file(Path,
               <<216,164,148,172,100,134,39,211,7,162,233,96,64,24,48,209,1,235,
@@ -58,17 +59,17 @@ with_large_file() ->
               false).
 
 with_directory() ->
-    set_mtime(?DATA_DIR, 1494221667),
-    with_file(?DATA_DIR, undefined, undefined, directory, read_write, 1494221667, false).
+    set_mtime(?NESTED_DIR, 1494221667),
+    with_file(?NESTED_DIR, undefined, undefined, directory, read_write, 1494221667, false).
 
 with_symlink() ->
-    with_error(filename:join(?DATA_DIR, ?SYMLINK_FILE), {invalid_type, symlink}).
+    with_error(?SYMLINK_FILE, {invalid_type, symlink}).
 
 with_nonexistent() ->
-    with_error(filename:join(?DATA_DIR, "NONEXISTENT"), enoent).
+    with_error(<<"NONEXISTENT">>, enoent).
 
 with_file(Path, Sha256, Size, Type, Access, Mtime, Deleted) ->
-    Result = fs_ent:build(Path),
+    Result = fs_ent:build(root(), Path),
     ?assertMatch({ok, _}, Result),
     {ok, Ent} = Result,
     ?assertEqual(Path, Ent#fs_ent.path),
@@ -80,10 +81,15 @@ with_file(Path, Sha256, Size, Type, Access, Mtime, Deleted) ->
     ?assertEqual(Deleted, Ent#fs_ent.deleted).
 
 with_error(Path, Reason) ->
-    Result = fs_ent:build(Path),
+    Result = fs_ent:build(root(), Path),
     ?assertMatch({error, _}, Result),
     ?assertEqual(element(2, Result), Reason).
 
+%% Utils
+
+root() ->
+    path:normalize_root(?DATA_DIR).
+
 set_mtime(Path, Mtime) ->
     FileInfo = #file_info{ mtime = Mtime },
-    ok = file:write_file_info(Path, FileInfo, [{time, posix}]).
+    ok = path:write_file_info(root(), Path, FileInfo).

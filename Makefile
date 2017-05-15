@@ -4,6 +4,7 @@ OBJ=            ebin/bitset.beam \
 		ebin/fs_ent_tests.beam \
 		ebin/fs_ent_tab.beam \
                 ebin/fs_ent_tab_tests.beam \
+                ebin/path.beam \
 		ebin/tfsp_scanner.beam \
 		ebin/tfsp_scanner_tests.beam \
 		ebin/tfsp_ssh_server.beam \
@@ -49,6 +50,9 @@ ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 			    ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
 
+ebin/path.beam: src/path.erl
+	$(ERLC) $(EFLAGS) src/path.erl
+
 ebin/tfsp_scanner.beam:	src/tfsp_scanner.erl \
 			ebin/fs_ent.beam \
 			ebin/fs_ent_tab.beam
@@ -68,4 +72,4 @@ ebin/tfsp_ssh_server_tests.beam: test/tfsp_ssh_server_tests.erl \
 .PHONY: clean
 
 clean:
-	rm -f $(OBJ)
+	rm ebin/*

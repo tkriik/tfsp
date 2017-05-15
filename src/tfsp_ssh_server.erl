@@ -3,8 +3,8 @@
 -module(tfsp_ssh_server).
 -behaviour(ssh_daemon_channel).
 
--export([start/3,
-         stop/1]).
+-export([start_daemon/3,
+         stop_daemon/1]).
 
 -export([init/1,
          handle_ssh_msg/2,
@@ -21,8 +21,8 @@
 
 -type ssh_server_st() :: #ssh_server_st{}.
 
--spec start(non_neg_integer(), file:path(), file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
--spec stop(ssh:ssh_daemon_ref()) -> ok.
+-spec start_daemon(non_neg_integer(), file:path(), file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
+-spec stop_daemon(ssh:ssh_daemon_ref()) -> ok.
 
 -spec init(term()) -> {ok, ssh_server_st()}.
 -spec handle_ssh_msg(ssh_connection:event(), ssh_server_st()) -> {ok, ssh_server_st()}.
@@ -32,7 +32,7 @@
 
 %% API
 
-start(Port, SystemDir, UserDir) ->
+start_daemon(Port, SystemDir, UserDir) ->
     % TODO: log
     SubsystemSpec = {erlang:atom_to_list(?MODULE), {?MODULE, []}},
     SshOpts = [{subsystems, [SubsystemSpec]},
@@ -42,7 +42,7 @@ start(Port, SystemDir, UserDir) ->
                {auth_methods, "publickey"}],
     ssh:daemon(Port, SshOpts).
 
-stop(DaemonRef) ->
+stop_daemon(DaemonRef) ->
     ssh:stop_daemon(DaemonRef).
 
 

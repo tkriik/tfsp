@@ -37,10 +37,10 @@ conn_tests() ->
 %% Test definitions
 
 test_start_stop() ->
-    Res = tfsp_ssh_server:start(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    Res = tfsp_ssh_server:start_daemon(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
     {ok, DaemonRef} = Res,
-    ?assertEqual(ok, tfsp_ssh_server:stop(DaemonRef)).
+    ?assertEqual(ok, tfsp_ssh_server:stop_daemon(DaemonRef)).
 
 test_connection() ->
     Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
@@ -71,12 +71,12 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
-    {ok, DaemonRef} = tfsp_ssh_server:start(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    {ok, DaemonRef} = tfsp_ssh_server:start_daemon(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     DaemonRef.
 
 cleanup(DaemonRef) ->
     _ = file:delete(?CLIENT_KNOWN_HOSTS),
-    ok = tfsp_ssh_server:stop(DaemonRef).
+    ok = tfsp_ssh_server:stop_daemon(DaemonRef).
 
 %% Utilities
 

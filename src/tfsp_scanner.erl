@@ -6,7 +6,7 @@
 
 -module(tfsp_scanner).
 
--export([start_link/1]).
+-export([start_link/4]).
 
 -ifdef(TFSP_TEST).
 -export([scan/3,
@@ -19,7 +19,7 @@
 
 %% Specs
 
--spec start_link([term()]) -> pid().
+-spec start_link(fs_ent_tab:handle(), file:path(), non_neg_integer(), [re:mp()]) -> pid().
 
 -spec init([term()]) -> none().
 -spec loop(fs_ent_tab:handle(), non_neg_integer(), [re:mp()]) -> none().
@@ -38,7 +38,7 @@
 % Spawns a new scanner worker with the given root path,
 % interval in seconds, and a list of regexes for ignoring
 % certain file name patterns.
-start_link([Table, Path, Interval, IgnoreRes]) ->
+start_link(Table, Path, Interval, IgnoreRes) ->
     spawn_link(?MODULE, init, [Table, Path, Interval, IgnoreRes]).
 
 

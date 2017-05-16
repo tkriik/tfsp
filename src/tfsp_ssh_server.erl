@@ -1,5 +1,6 @@
-%%% tfsp SSH server module, handles buffering, serialization/deserialization
-%%% and communicating incoming and outgoing data to/from other handler processes.
+%%% tfsp SSH server module, handles connection data buffering
+%%% and communicating incoming and outgoing data to/from other
+%%% handler processes.
 -module(tfsp_ssh_server).
 -behaviour(ssh_daemon_channel).
 
@@ -12,16 +13,9 @@
          terminate/2]).
 
 
-%% Records
-
--record(ssh_server_st, { ftab   :: fs_ent_tab:handle(),
-                         root   :: file:path(),
-                         buffer :: binary() }).
-
-
 %% Specs
 
--type ssh_server_st() :: #ssh_server_st{}.
+-record(ssh_chan_st, { buffer :: binary() }).
 
 -spec start_daemon(fs_ent_tab:handle(),
                    file:path(),
@@ -30,17 +24,10 @@
                    file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
 -spec stop_daemon(ssh:ssh_daemon_ref()) -> ok.
 
--spec init(term()) -> {ok, ssh_server_st()}.
--spec handle_ssh_msg(ssh_connection:event(),
-                     ssh_server_st()) -> {ok, ssh_server_st()}.
--spec handle_msg(term(), ssh_server_st()) -> {ok, ssh_server_st()}.
--spec terminate(term(), ssh_server_st()) -> ok.
-
 
 %% API
 
 start_daemon(Table, Root, Port, SystemDir, UserDir) ->
-    % TODO: log
     SubsystemSpec = {"tfsp_ssh_server", {tfsp_ssh_server, [Table, Root]}},
     SshOpts = [{subsystems, [SubsystemSpec]},
                {ssh_cli, no_cli},
@@ -55,26 +42,22 @@ stop_daemon(DaemonRef) ->
 
 %% SSH daemon channel allbacks
 
-init([Table, Root]) ->
-    % TODO: log
-    St = #ssh_server_st{ ftab = Table,
-                         root = Root,
-                         buffer = <<>> },
-    {ok, St}.
-handle_msg({ssh_channel_up, _ChanId, _ConnRef}, St) ->
-    % TODO: log
-    {ok, St};
-handle_msg(_Msg, St) ->
-    % TODO: log
+init([_Table, _Root]) ->
+    St = #ssh_chan_st{ buffer = <<>> },
     {ok, St}.
 
-handle_ssh_msg({data, _ChanId, 0, Data},
-               #ssh_server_st{ buffer = Buffer } = St) ->
+handle_msg(_Msg, St) ->
+    {ok, St}.
+
+% Got data from channel, append to channel state buffer.
+handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}},
+               #ssh_chan_st { buffer = Buffer } = St) ->
     _Buffer = <<Buffer/binary, Data/binary>>,
-    _St = St#ssh_server_st{ buffer = _Buffer },
+    _St = St#ssh_chan_st{ buffer = _Buffer },
     {ok, _St};
-handle_ssh_msg({eof, _ChanId}, St) ->
-    _St = St#ssh_server_st{ buffer = <<>> },
+%% Got EOF from channel, flush channel state buffer.
+handle_ssh_msg({ssh_cm, _ConnRef, {eof, _ChanId}}, St) ->
+    _St = St#ssh_chan_st{ buffer = <<>> },
     {ok, _St};
 handle_ssh_msg(_Msg, St) ->
     {ok, St}.

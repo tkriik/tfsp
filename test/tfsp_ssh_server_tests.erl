@@ -73,8 +73,11 @@ test_client_send() ->
     {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
     success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
-    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOOBAR">>, 1000)),
-    ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)).
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, 1000)),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, 1000)),
+    ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)),
+    timer:sleep(100), % wait for EOF to arrive
+    ?assertEqual(ok, ssh:close(ConnRef)).
 
 
 %% Fixtures

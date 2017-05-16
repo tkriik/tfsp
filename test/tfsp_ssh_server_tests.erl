@@ -7,6 +7,7 @@
 
 %% Constants
 
+-define(ROOT, <<"test/data/ssh_client">>).
 -define(HOST, "localhost").
 -define(PORT, 1234).
 -define(SERVER_SYSTEM_DIR, "test/data/ssh_server/etc/ssh/").
@@ -30,14 +31,18 @@ conn_tests() ->
     {foreach, fun setup/0, fun cleanup/1,
      [{"connection setup and teardown", fun test_connection/0},
       {"channel setup and teardown", fun test_channel/0},
-      {"subsystem execution request", fun test_subsystem/0}]
+      {"subsystem execution request", fun test_subsystem/0},
+      {"client connection data send", fun test_client_send/0}]
     }.
 
 
 %% Test definitions
 
 test_start_stop() ->
-    Res = tfsp_ssh_server:start_daemon(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    Ftab = fs_ent_tab:create(),
+    Root = path:normalize_root(?ROOT),
+    Res = tfsp_ssh_server:start_daemon(Ftab, Root, ?PORT,
+                                       ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
     {ok, DaemonRef} = Res,
     ?assertEqual(ok, tfsp_ssh_server:stop_daemon(DaemonRef)).
@@ -64,6 +69,13 @@ test_subsystem() ->
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
 
+test_client_send() ->
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
+    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOOBAR">>, 1000)),
+    ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)).
+
 
 %% Fixtures
 
@@ -71,7 +83,11 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
-    {ok, DaemonRef} = tfsp_ssh_server:start_daemon(?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    Ftab = fs_ent_tab:create(),
+    Root = path:normalize_root(?ROOT),
+    {ok, DaemonRef} = tfsp_ssh_server:start_daemon(Ftab, Root, ?PORT,
+                                                   ?SERVER_SYSTEM_DIR,
+                                                   ?SERVER_USER_DIR),
     DaemonRef.
 
 cleanup(DaemonRef) ->

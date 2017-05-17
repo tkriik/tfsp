@@ -7,7 +7,7 @@
 
 %% Constants
 
--define(ROOT, <<"test/data/ssh_client">>).
+-define(ROOT, <<"test/data/ssh_server">>).
 -define(HOST, "localhost").
 -define(PORT, 1234).
 -define(SERVER_SYSTEM_DIR, "test/data/ssh_server/etc/ssh/").

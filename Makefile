@@ -1,10 +1,12 @@
 OBJ=            ebin/bitset.beam \
 		ebin/bitset_tests.beam \
+		ebin/event_queue.beam \
 		ebin/fs_ent.beam \
 		ebin/fs_ent_tests.beam \
 		ebin/fs_ent_tab.beam \
                 ebin/fs_ent_tab_tests.beam \
                 ebin/path.beam \
+                ebin/tfsp_event.beam \
 		ebin/tfsp_scanner.beam \
 		ebin/tfsp_scanner_tests.beam \
 		ebin/tfsp_server.beam \
@@ -53,8 +55,14 @@ ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 			    ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
 
+ebin/event_queue.beam: test/event_queue.erl
+	$(ERLC) $(EFLAGS) test/event_queue.erl
+
 ebin/path.beam: src/path.erl
 	$(ERLC) $(EFLAGS) src/path.erl
+
+ebin/tfsp_event.beam: src/tfsp_event.erl
+	$(ERLC) $(EFLAGS) src/tfsp_event.erl
 
 ebin/tfsp_scanner.beam:	include/fs.hrl \
 			src/tfsp_scanner.erl \

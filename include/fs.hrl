@@ -16,11 +16,11 @@
 
 
 %% Entity table handle
--type fs_tab() :: {fs_tab, ets:tid()}.
+-type fs_ent_tab() :: {fs_ent_tab, ets:tid()}.
 
 
 %% File system context for each sync handler.
 -record(fs_ctx, { root      :: fs_path(),
-                  fs_tab    :: fs_tab() }).
+                  ent_tab   :: fs_ent_tab() }).
 
 -type fs_ctx() :: #fs_ctx{}.

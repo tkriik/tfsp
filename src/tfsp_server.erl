@@ -18,7 +18,7 @@
 
 %% Specs
 
--record(ssh_init_args, { fstab      :: fs_tab(),
+-record(ssh_init_args, { fstab      :: fs_ent_tab(),
                          root       :: fs_path(),
                          port       :: non_neg_integer(),
                          system_dir :: fs_path(),
@@ -32,7 +32,7 @@
 -type ssh_server_st() :: #ssh_server_st{}.
 -type server_st() :: ssh_server_st().
 
--spec start_link_ssh(fs_tab(),
+-spec start_link_ssh(fs_ent_tab(),
                      fs_path(),
                      non_neg_integer(),
                      fs_path(),

@@ -7,6 +7,7 @@ OBJ=            ebin/bitset.beam \
                 ebin/path.beam \
 		ebin/tfsp_scanner.beam \
 		ebin/tfsp_scanner_tests.beam \
+		ebin/tfsp_server.beam \
 		ebin/tfsp_ssh_server.beam \
 		ebin/tfsp_ssh_server_tests.beam
 
@@ -61,6 +62,10 @@ ebin/tfsp_scanner.beam:	src/tfsp_scanner.erl \
 ebin/tfsp_scanner_tests.beam: test/tfsp_scanner_tests.erl \
 			      ebin/tfsp_scanner.beam
 	$(ERLC) $(EFLAGS) test/tfsp_scanner_tests.erl
+
+ebin/tfsp_server.beam: src/tfsp_server.erl \
+		       ebin/tfsp_ssh_server.beam
+	$(ERLC) $(EFLAGS) src/tfsp_server.erl
 
 ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_server.erl

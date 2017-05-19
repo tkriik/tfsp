@@ -20,12 +20,12 @@
 
 module_test_() ->
     {"Tests for the tfsp SSH server module interface",
-     [daemon_tests(),
+     [server_tests(),
       conn_tests()]}.
 
-daemon_tests() ->
+server_tests() ->
     {setup, fun app_setup/0,
-     {"daemon setup and teardown", fun test_start_stop/0}}.
+     {"server setup and teardown", fun test_start_stop/0}}.
 
 conn_tests() ->
     {foreach, fun setup/0, fun cleanup/1,
@@ -39,13 +39,12 @@ conn_tests() ->
 %% Test definitions
 
 test_start_stop() ->
-    Ftab = fs_ent_tab:create(),
+    FsTab = fs_ent_tab:create(),
     Root = path:normalize_root(?ROOT),
-    Res = tfsp_ssh_server:start_daemon(Ftab, Root, ?PORT,
-                                       ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    Res = tfsp_server:start_link_ssh(FsTab, Root, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
-    {ok, DaemonRef} = Res,
-    ?assertEqual(ok, tfsp_ssh_server:stop_daemon(DaemonRef)).
+    {ok, ServerRef} = Res,
+    ?assertEqual(ok, tfsp_server:stop(ServerRef)).
 
 test_connection() ->
     Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
@@ -86,16 +85,16 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
-    Ftab = fs_ent_tab:create(),
+    FsTab = fs_ent_tab:create(),
     Root = path:normalize_root(?ROOT),
-    {ok, DaemonRef} = tfsp_ssh_server:start_daemon(Ftab, Root, ?PORT,
-                                                   ?SERVER_SYSTEM_DIR,
-                                                   ?SERVER_USER_DIR),
-    DaemonRef.
+    {ok, ServerRef} = tfsp_server:start_link_ssh(FsTab, Root, ?PORT,
+                                                 ?SERVER_SYSTEM_DIR,
+                                                 ?SERVER_USER_DIR),
+    ServerRef.
 
-cleanup(DaemonRef) ->
+cleanup(ServerRef) ->
     _ = file:delete(?CLIENT_KNOWN_HOSTS),
-    ok = tfsp_ssh_server:stop_daemon(DaemonRef).
+    ok = tfsp_server:stop(ServerRef).
 
 %% Utilities
 

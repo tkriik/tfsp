@@ -5,7 +5,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--include("fs_ent.hrl").
+-include("fs.hrl").
 
 %% Defines
 
@@ -14,7 +14,7 @@
 
 %% Specs
 
--spec build(file:path(), file:path()) -> {ok, fs_ent()} | {error, Reason :: any()}.
+-spec build(fs_path(), fs_path(), fs_ent()) -> {ok, fs_ent()} | {error, Reason :: any()}.
 
 
 %% API

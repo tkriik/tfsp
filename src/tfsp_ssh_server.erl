@@ -12,16 +12,18 @@
          handle_msg/2,
          terminate/2]).
 
+-include("fs.hrl").
+
 
 %% Specs
 
 -record(ssh_chan_st, { buffer :: binary() }).
 
--spec start_daemon(fs_ent_tab:handle(),
-                   file:path(),
+-spec start_daemon(fs_tab(),
+                   fs_path(),
                    non_neg_integer(),
-                   file:path(),
-                   file:path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
+                   fs_path(),
+                   fs_path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
 -spec stop_daemon(ssh:ssh_daemon_ref()) -> ok.
 
 

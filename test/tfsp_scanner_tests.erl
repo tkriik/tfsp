@@ -5,7 +5,7 @@
 -include_lib("kernel/include/file.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
--include("fs_ent.hrl").
+-include("fs.hrl").
 
 -define(SCAN_PATH, <<"test/data/scan">>).
 -define(MODIFIED_FILE, <<"nested/LICENSE_COPY.txt">>).

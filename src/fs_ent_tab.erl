@@ -10,7 +10,7 @@
 
          count/1]).
 
--include("fs_ent.hrl").
+-include("fs.hrl").
 
 
 %% Specs
@@ -23,8 +23,8 @@
 -spec delete(handle()) -> ok.
 
 -spec insert(handle(), fs_ent()) -> ok.
--spec find(handle(), file:path()) -> {ok, fs_ent()} | none.
--spec remove(handle(), file:path()) -> ok.
+-spec find(handle(), fs_path()) -> {ok, fs_ent()} | none.
+-spec remove(handle(), fs_path()) -> ok.
 
 -spec count(handle()) -> non_neg_integer().
 

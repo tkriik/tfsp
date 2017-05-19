@@ -13,14 +13,16 @@
 
          code_change/3]).
 
+-include("fs.hrl").
+
 
 %% Specs
 
--record(ssh_init_args, { fstab      :: fs_ent_tab:handle(),
-                         root       :: file:path(),
+-record(ssh_init_args, { fstab      :: fs_tab(),
+                         root       :: fs_path(),
                          port       :: non_neg_integer(),
-                         system_dir :: file:path(),
-                         user_dir   :: file:path() }).
+                         system_dir :: fs_path(),
+                         user_dir   :: fs_path() }).
 
 -type ssh_init_args() :: #ssh_init_args{}.
 -type init_args() :: ssh_init_args().
@@ -30,11 +32,11 @@
 -type ssh_server_st() :: #ssh_server_st{}.
 -type server_st() :: ssh_server_st().
 
--spec start_link_ssh(fs_ent_tab:handle(),
-                     file:path(),
+-spec start_link_ssh(fs_tab(),
+                     fs_path(),
                      non_neg_integer(),
-                     file:path(),
-                     file:path()) -> {ok, pid()} | {error, term()}.
+                     fs_path(),
+                     fs_path()) -> {ok, pid()} | {error, term()}.
 -spec stop(pid()) -> ok.
 
 -spec init(init_args()) -> {ok, server_st()} | {stop, term()}.

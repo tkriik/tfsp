@@ -15,22 +15,22 @@
 
 -include_lib("kernel/include/file.hrl").
 
--include("fs_ent.hrl").
+-include("fs.hrl").
 
 %% Specs
 
--spec start_link(fs_ent_tab:handle(), file:path(), non_neg_integer(), [re:mp()]) -> pid().
+-spec start_link(fs_tab(), fs_path(), non_neg_integer(), [re:mp()]) -> pid().
 
 -spec init([term()]) -> none().
--spec loop(fs_ent_tab:handle(), file:path(), non_neg_integer(), [re:mp()]) -> none().
+-spec loop(fs_tab(), fs_path(), non_neg_integer(), [re:mp()]) -> none().
 
--spec scan(fs_ent_tab:handle(), file:path(), file:path(), [re:mp()]) -> non_neg_integer().
--spec scan_ent(fs_ent_tab:handle(), file:path(), file:path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
--spec update_ent(fs_ent_tab:handle(), file:path(), file:path(), [re:mp()], fs_ent()) -> non_neg_integer().
--spec create_ent(fs_ent_tab:handle(), file:path(), file:path(), [re:mp()]) -> non_neg_integer().
+-spec scan(fs_tab(), fs_path(), fs_path(), [re:mp()]) -> non_neg_integer().
+-spec scan_ent(fs_tab(), fs_path(), fs_path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
+-spec update_ent(fs_tab(), fs_path(), fs_path(), [re:mp()], fs_ent()) -> non_neg_integer().
+-spec create_ent(fs_tab(), fs_path(), fs_path(), [re:mp()]) -> non_neg_integer().
 
--spec check_deleted(fs_ent_tab:handle(), file:path()) -> non_neg_integer().
--spec mark_deleted(fs_ent_tab:handle(), fs_ent()) -> ok.
+-spec check_deleted(fs_tab(), fs_path()) -> non_neg_integer().
+-spec mark_deleted(fs_tab(), fs_ent()) -> ok.
 
 
 %% API

@@ -35,7 +35,7 @@ ebin/bitset_tests.beam:	test/bitset_tests.erl \
 			ebin/bitset.beam
 	$(ERLC) $(EFLAGS) test/bitset_tests.erl
 
-ebin/fs_ent.beam: include/fs_ent.hrl \
+ebin/fs_ent.beam: include/fs.hrl \
 		  src/fs_ent.erl
 	$(ERLC) $(EFLAGS) src/fs_ent.erl
 
@@ -43,7 +43,8 @@ ebin/fs_ent_tests.beam: test/fs_ent_tests.erl \
 			ebin/fs_ent.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tests.erl
 
-ebin/fs_ent_tab.beam: src/fs_ent_tab.erl \
+ebin/fs_ent_tab.beam: include/fs.hrl \
+		      src/fs_ent_tab.erl \
 		      ebin/fs_ent.beam
 	$(ERLC) $(EFLAGS) src/fs_ent_tab.erl
 
@@ -54,7 +55,8 @@ ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 ebin/path.beam: src/path.erl
 	$(ERLC) $(EFLAGS) src/path.erl
 
-ebin/tfsp_scanner.beam:	src/tfsp_scanner.erl \
+ebin/tfsp_scanner.beam:	include/fs.hrl \
+			src/tfsp_scanner.erl \
 			ebin/fs_ent.beam \
 			ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) src/tfsp_scanner.erl
@@ -66,6 +68,9 @@ ebin/tfsp_scanner_tests.beam: test/tfsp_scanner_tests.erl \
 ebin/tfsp_server.beam: src/tfsp_server.erl \
 		       ebin/tfsp_ssh_server.beam
 	$(ERLC) $(EFLAGS) src/tfsp_server.erl
+
+ebin/tfsp_ssh_client.beam: src/tfsp_ssh_client.erl
+	$(ERLC) $(EFLAGS) src/tfsp_ssh_client.erl
 
 ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_server.erl

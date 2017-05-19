@@ -14,6 +14,7 @@
 -define(SERVER_USER_DIR, "test/data/ssh_server/home/ssh_server/ssh").
 -define(CLIENT_USER_DIR, "test/data/ssh_client/home/ssh_client/ssh/").
 -define(CLIENT_KNOWN_HOSTS, "test/data/ssh_client/home/ssh_client/ssh/known_hosts").
+-define(TIMEOUT, 5000).
 
 
 %% Main tests
@@ -47,33 +48,33 @@ test_start_stop() ->
     ?assertEqual(ok, tfsp_server:stop(ServerRef)).
 
 test_connection() ->
-    Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
+    Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ConnRef} = Res,
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_channel() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
-    Res = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
+    Res = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ChanId} = Res,
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_subsystem() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
-    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
-    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
+    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?TIMEOUT),
     ?assertEqual(success, Res),
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_client_send() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), 1000),
-    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, 1000),
-    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", 1000),
-    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, 1000)),
-    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, 1000)),
+    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
+    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?TIMEOUT),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, ?TIMEOUT)),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, ?TIMEOUT)),
     ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)),
     timer:sleep(100), % wait for EOF to arrive
     ?assertEqual(ok, ssh:close(ConnRef)).

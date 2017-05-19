@@ -8,6 +8,7 @@ OBJ=            ebin/bitset.beam \
 		ebin/tfsp_scanner.beam \
 		ebin/tfsp_scanner_tests.beam \
 		ebin/tfsp_server.beam \
+		ebin/tfsp_ssh_client.beam \
 		ebin/tfsp_ssh_server.beam \
 		ebin/tfsp_ssh_server_tests.beam
 
@@ -69,10 +70,14 @@ ebin/tfsp_server.beam: src/tfsp_server.erl \
 		       ebin/tfsp_ssh_server.beam
 	$(ERLC) $(EFLAGS) src/tfsp_server.erl
 
-ebin/tfsp_ssh_client.beam: src/tfsp_ssh_client.erl
+ebin/tfsp_ssh_client.beam: src/tfsp_ssh_client.erl \
+			   include/conn.hrl \
+			   include/fs.hrl
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_client.erl
 
-ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl
+ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl \
+			   include/conn.hrl \
+			   include/fs.hrl
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_server.erl
 
 ebin/tfsp_ssh_server_tests.beam: test/tfsp_ssh_server_tests.erl \

@@ -12,14 +12,13 @@
          handle_msg/2,
          terminate/2]).
 
+-include("conn.hrl").
 -include("fs.hrl").
 
 
 %% Specs
 
--record(ssh_chan_st, { buffer :: binary() }).
-
--spec start_daemon(fs_tab(),
+-spec start_daemon(fs_ent_tab(),
                    fs_path(),
                    non_neg_integer(),
                    fs_path(),
@@ -45,7 +44,7 @@ stop_daemon(DaemonRef) ->
 %% SSH daemon channel allbacks
 
 init([_Table, _Root]) ->
-    St = #ssh_chan_st{ buffer = <<>> },
+    St = #conn_st{ buffer = <<>> },
     {ok, St}.
 
 handle_msg(_Msg, St) ->
@@ -53,17 +52,16 @@ handle_msg(_Msg, St) ->
 
 % Got data from channel, append to channel state buffer.
 handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}},
-               #ssh_chan_st { buffer = Buffer } = St) ->
+               #conn_st { buffer = Buffer } = St) ->
     _Buffer = <<Buffer/binary, Data/binary>>,
-    _St = St#ssh_chan_st{ buffer = _Buffer },
+    _St = St#conn_st{ buffer = _Buffer },
     {ok, _St};
 %% Got EOF from channel, flush channel state buffer.
 handle_ssh_msg({ssh_cm, _ConnRef, {eof, _ChanId}}, St) ->
-    _St = St#ssh_chan_st{ buffer = <<>> },
+    _St = St#conn_st{ buffer = <<>> },
     {ok, _St};
 handle_ssh_msg(_Msg, St) ->
     {ok, St}.
 
 terminate(_Reason, _St) ->
-    % TODO: log
     ok.

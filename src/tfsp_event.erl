@@ -4,7 +4,11 @@
 -export([start_link/0,
          stop/1,
          add_handler/3,
+
+         notify_fs_ent_created/2,
          notify_misc/2]).
+
+-include("fs.hrl").
 
 
 %% Specs
@@ -12,6 +16,7 @@
 -spec start_link() -> {ok, pid()}.
 -spec add_handler(pid(), atom(), term()) -> ok | {error, term()}.
 
+-spec notify_fs_ent_created(pid(), fs_ent()) -> ok.
 -spec notify_misc(pid(), term()) -> ok.
 
 
@@ -25,6 +30,9 @@ stop(Pid) ->
 
 add_handler(Pid, Module, Args) ->
     gen_event:add_handler(Pid, Module, Args).
+
+notify_fs_ent_created(Pid, Ent) ->
+    notify(Pid, {fs_ent_created, Ent}).
 
 notify_misc(Pid, Event) ->
     notify(Pid, {misc, Event}).

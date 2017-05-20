@@ -4,13 +4,8 @@
 
 -export([start_link/0,
          stop/1,
-
-         assert_immediate/2,
-         assert_immediate_/2,
-         assert_immediate_type/2,
-         assert_immediate_type_/2,
-         assert_immediate_end/1,
-         assert_immediate_end_/1]).
+         verify_strict/2,
+         verify_loose/2]).
 
 -export([init/1,
          terminate/2,
@@ -21,6 +16,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("event.hrl").
+
 
 %% Specs
 
@@ -28,6 +25,13 @@
 
 -spec start_link() -> {ok, pid()}.
 -spec stop(pid()) -> ok.
+
+-type event_spec() :: atom() | event().
+
+-spec verify_strict(pid(), [event_spec()]) -> ok
+                                            | {spec_mismatch, event_spec(), event()}
+                                            | {spec_unfinished, event_spec()}.
+-spec verify_loose(pid(), [event_spec()]) -> ok | {spec_unfinished, event_spec()}.
 
 
 %% API
@@ -40,29 +44,55 @@ start_link() ->
 stop(Pid) ->
     ok = tfsp_event:stop(Pid).
 
+% Verifies a list of event specifications in strict order,
+% with unspecified events NOT allowed between specified events.
+verify_strict(_Pid, []) ->
+    ok;
+verify_strict(Pid, [EventSpec | EventSpecs]) ->
+    case pull(Pid) of
+        {ok, {Type, Msg} = Event} ->
+            case EventSpec of
+                {TypeSpec, MsgSpec} ->
+                    if Type =:= TypeSpec andalso Msg =:= MsgSpec ->
+                           verify_strict(Pid, EventSpecs);
+                       true ->
+                           {spec_mismatch, EventSpec, Event}
+                    end;
+                TypeSpec ->
+                    if Type =:= TypeSpec ->
+                           verify_strict(Pid, EventSpecs);
+                       true ->
+                           {spec_mismatch, EventSpec, Event}
+                    end
+            end;
+        none ->
+            {spec_unfinished, EventSpec}
+    end.
 
-%% Direct assertions
-
-assert_immediate(Event, Pid) ->
-    ?assertEqual({ok, Event}, pull(Pid)).
-
-assert_immediate_type(EventType, Pid) ->
-    ?assertMatch({ok, {EventType, _}}, pull(Pid)).
-
-assert_immediate_end(Pid) ->
-    ?assertEqual(none, pull(Pid)).
-
-
-%% Test generators
-
-assert_immediate_(Event, Pid) ->
-    ?_assertEqual({ok, Event}, pull(Pid)).
-
-assert_immediate_type_(EventType, Pid) ->
-    ?_assertMatch({ok, {EventType, _}}, pull(Pid)).
-
-assert_immediate_end_(Pid) ->
-    ?_assertEqual(none, pull(Pid)).
+% Verifies a list of event specifications in loose order,
+% with unspecified events allowed between specified events.
+verify_loose(_Pid, []) ->
+    ok;
+verify_loose(Pid, [EventSpec | EventSpecs]) ->
+    case pull(Pid) of
+        {ok, {Type, Msg}} ->
+            case EventSpec of
+                {TypeSpec, MsgSpec} ->
+                    if Type =:= TypeSpec andalso Msg =:= MsgSpec ->
+                           verify_loose(Pid, EventSpecs);
+                       true ->
+                           verify_loose(Pid, [EventSpec | EventSpecs])
+                    end;
+                TypeSpec ->
+                    if Type =:= TypeSpec ->
+                           verify_loose(Pid, EventSpecs);
+                       true ->
+                           verify_loose(Pid, [EventSpec | EventSpecs])
+                    end
+            end;
+        none ->
+            {spec_unfinished, EventSpec}
+    end.
 
 
 %% gen_event callbacks

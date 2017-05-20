@@ -4,6 +4,8 @@
 
 -include_lib("eunit/include/eunit.hrl").
 
+-include("fs.hrl").
+
 
 %% Constants
 
@@ -40,9 +42,10 @@ conn_tests() ->
 %% Test definitions
 
 test_start_stop() ->
-    FsTab = fs_ent_tab:create(),
+    EntTab = fs_ent_tab:create(),
     Root = path:normalize_root(?ROOT),
-    Res = tfsp_server:start_link_ssh(FsTab, Root, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
+    Res = tfsp_server:start_link_ssh(FsCtx, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
     {ok, ServerRef} = Res,
     ?assertEqual(ok, tfsp_server:stop(ServerRef)).
@@ -86,11 +89,10 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
-    FsTab = fs_ent_tab:create(),
+    EntTab = fs_ent_tab:create(),
     Root = path:normalize_root(?ROOT),
-    {ok, ServerRef} = tfsp_server:start_link_ssh(FsTab, Root, ?PORT,
-                                                 ?SERVER_SYSTEM_DIR,
-                                                 ?SERVER_USER_DIR),
+    FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
+    {ok, ServerRef} = tfsp_server:start_link_ssh(FsCtx, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
     ServerRef.
 
 cleanup(ServerRef) ->

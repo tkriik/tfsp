@@ -1,16 +1,14 @@
 -module(tfsp_server).
 -behaviour(gen_server).
 
--export([start_link_ssh/5,
+-export([start_link_ssh/4,
          stop/1]).
 
 -export([init/1,
          terminate/2,
-
          handle_call/3,
          handle_cast/2,
          handle_info/2,
-
          code_change/3]).
 
 -include("fs.hrl").
@@ -18,8 +16,7 @@
 
 %% Specs
 
--record(ssh_init_args, { fstab      :: fs_ent_tab(),
-                         root       :: fs_path(),
+-record(ssh_init_args, { fs_ctx     :: fs_ctx(),
                          port       :: non_neg_integer(),
                          system_dir :: fs_path(),
                          user_dir   :: fs_path() }).
@@ -32,8 +29,7 @@
 -type ssh_server_st() :: #ssh_server_st{}.
 -type server_st() :: ssh_server_st().
 
--spec start_link_ssh(fs_ent_tab(),
-                     fs_path(),
+-spec start_link_ssh(fs_ctx(),
                      non_neg_integer(),
                      fs_path(),
                      fs_path()) -> {ok, pid()} | {error, term()}.
@@ -44,9 +40,8 @@
 
 %% API
 
-start_link_ssh(FsTab, Root, Port, SystemDir, UserDir) ->
-    SshInitArgs = #ssh_init_args{ fstab         = FsTab,
-                                  root          = Root,
+start_link_ssh(FsCtx, Port, SystemDir, UserDir) ->
+    SshInitArgs = #ssh_init_args{ fs_ctx        = FsCtx,
                                   port          = Port,
                                   system_dir    = SystemDir,
                                   user_dir      = UserDir },
@@ -58,12 +53,11 @@ stop(ServerRef) ->
 
 %% SSH-specific gen_server callbacks
 
-init(#ssh_init_args{ fstab      = FsTab,
-                     root       = Root,
+init(#ssh_init_args{ fs_ctx     = FsCtx,
                      port       = Port,
                      system_dir = SystemDir,
                      user_dir   = UserDir }) ->
-    case tfsp_ssh_server:start_daemon(FsTab, Root, Port, SystemDir, UserDir) of
+    case tfsp_ssh_server:start_daemon(FsCtx, Port, SystemDir, UserDir) of
         {ok, DaemonRef} ->
             SshServerSt = #ssh_server_st{ daemon_ref = DaemonRef },
             {ok, SshServerSt};

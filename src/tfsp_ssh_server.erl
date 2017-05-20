@@ -4,7 +4,7 @@
 -module(tfsp_ssh_server).
 -behaviour(ssh_daemon_channel).
 
--export([start_daemon/5,
+-export([start_daemon/4,
          stop_daemon/1]).
 
 -export([init/1,
@@ -18,8 +18,7 @@
 
 %% Specs
 
--spec start_daemon(fs_ent_tab(),
-                   fs_path(),
+-spec start_daemon(fs_ctx(),
                    non_neg_integer(),
                    fs_path(),
                    fs_path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
@@ -28,8 +27,8 @@
 
 %% API
 
-start_daemon(Table, Root, Port, SystemDir, UserDir) ->
-    SubsystemSpec = {"tfsp_ssh_server", {tfsp_ssh_server, [Table, Root]}},
+start_daemon(FsCtx, Port, SystemDir, UserDir) ->
+    SubsystemSpec = {"tfsp_ssh_server", {tfsp_ssh_server, [FsCtx]}},
     SshOpts = [{subsystems, [SubsystemSpec]},
                {ssh_cli, no_cli},
                {system_dir, SystemDir},
@@ -43,7 +42,7 @@ stop_daemon(DaemonRef) ->
 
 %% SSH daemon channel allbacks
 
-init([_Table, _Root]) ->
+init([_FsCtx]) ->
     St = #conn_st{ buffer = <<>> },
     {ok, St}.
 

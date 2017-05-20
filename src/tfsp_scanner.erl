@@ -111,10 +111,11 @@ update_ent(#fs_ctx{ root = Root } = FsCtx, Filename, IgnoreRes,
         _ -> Acc
     end.
 
-create_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes) ->
+create_ent(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes) ->
     case fs_ent:build(Root, Filename) of
         {ok, Ent} ->
             ok = fs_ent_tab:insert(EntTab, Ent),
+            ok = tfsp_event:notify_fs_ent_created(EvMgr, Ent),
             case Ent#fs_ent.type of
                 regular -> 1;
                 directory -> 1 + scan(FsCtx, Filename, IgnoreRes) % recurse if directory
@@ -133,16 +134,16 @@ create_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes
 % with their deleted flag not set whether they still exist.
 % Those that don't get their 'deleted' flag set to true.
 % Returns the number of entries marked deleted.
-check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} = EntTab }) -> % TODO: refactor
+check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} } = FsCtx) -> % TODO: refactor
     ets:foldl(fun(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
                       case Deleted of
                           true -> NumDeleted;
                           false -> case path:read_link_info(Root, Path) of
                                        {error, enoent} ->
-                                           mark_deleted(EntTab, Ent),
+                                           mark_deleted(FsCtx, Ent),
                                            NumDeleted + 1;
                                        {error, enotdir} ->
-                                           mark_deleted(EntTab, Ent),
+                                           mark_deleted(FsCtx, Ent),
                                            NumDeleted + 1;
                                        _ ->
                                            NumDeleted
@@ -150,5 +151,7 @@ check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} = EntTab }) -> %
                       end
               end, 0, Tid).
 
-mark_deleted(Table, Ent) ->
-    ok = fs_ent_tab:insert(Table, Ent#fs_ent{ deleted = true }).
+mark_deleted(#fs_ctx{ ev_mgr = EvMgr, ent_tab = EntTab }, Ent) ->
+    DeletedEnt = Ent#fs_ent{ deleted = true },
+    ok = fs_ent_tab:insert(EntTab, DeletedEnt),
+    ok = tfsp_event:notify_fs_ent_deleted(EvMgr, DeletedEnt).

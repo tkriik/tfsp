@@ -4,6 +4,7 @@
 
 -export([start_link/0,
          stop/1,
+         clear/1,
          verify_strict/2,
          verify_loose/2]).
 
@@ -32,6 +33,7 @@
                                             | {spec_mismatch, event_spec(), event()}
                                             | {spec_unfinished, event_spec()}.
 -spec verify_loose(pid(), [event_spec()]) -> ok | {spec_unfinished, event_spec()}.
+-spec clear(pid()) -> ok.
 
 
 %% API
@@ -43,6 +45,9 @@ start_link() ->
 
 stop(Pid) ->
     ok = tfsp_event:stop(Pid).
+
+clear(Pid) ->
+    gen_event:call(Pid, ?MODULE, clear).
 
 % Verifies a list of event specifications in strict order,
 % with unspecified events NOT allowed between specified events.
@@ -116,7 +121,10 @@ handle_call(pull, #event_queue_st{ queue = Q } = St) ->
             {ok, {ok, Event}, _St};
         {empty, _Q} ->
             {ok, none, St}
-    end.
+    end;
+handle_call(clear, _St) ->
+    St = #event_queue_st{ queue = queue:new() },
+    {ok, ok, St}.
 
 handle_info(_Msg, St) ->
     {ok, St}.

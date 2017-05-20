@@ -1,6 +1,7 @@
 OBJ=            ebin/bitset.beam \
 		ebin/bitset_tests.beam \
 		ebin/event_queue.beam \
+		ebin/event_queue_tests.beam \
 		ebin/fs_ent.beam \
 		ebin/fs_ent_tests.beam \
 		ebin/fs_ent_tab.beam \
@@ -57,6 +58,10 @@ ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 
 ebin/event_queue.beam: test/event_queue.erl
 	$(ERLC) $(EFLAGS) test/event_queue.erl
+
+ebin/event_queue_tests.beam: test/event_queue_tests.erl \
+			     ebin/event_queue.beam
+	$(ERLC) $(EFLAGS) test/event_queue_tests.erl
 
 ebin/path.beam: src/path.erl
 	$(ERLC) $(EFLAGS) src/path.erl

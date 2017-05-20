@@ -2,7 +2,9 @@
 -module(tfsp_event).
 
 -export([start_link/0,
-         add_handler/3]).
+         stop/1,
+         add_handler/3,
+         notify_misc/2]).
 
 
 %% Specs
@@ -16,5 +18,17 @@
 start_link() ->
     gen_event:start_link().
 
+stop(Pid) ->
+    gen_event:stop(Pid).
+
 add_handler(Pid, Module, Args) ->
     gen_event:add_handler(Pid, Module, Args).
+
+notify_misc(Pid, Event) ->
+    notify(Pid, {misc, Event}).
+
+
+%% Utilities
+
+notify(Pid, Event) ->
+    gen_event:notify(Pid, Event).

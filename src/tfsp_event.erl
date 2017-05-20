@@ -12,6 +12,8 @@
 -spec start_link() -> {ok, pid()}.
 -spec add_handler(pid(), atom(), term()) -> ok | {error, term()}.
 
+-spec notify_misc(pid(), term()) -> ok.
+
 
 %% API
 

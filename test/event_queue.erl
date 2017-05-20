@@ -4,7 +4,13 @@
 
 -export([start_link/0,
          stop/1,
-         pull/1]).
+
+         assert_immediate/2,
+         assert_immediate_/2,
+         assert_immediate_type/2,
+         assert_immediate_type_/2,
+         assert_immediate_end/1,
+         assert_immediate_end_/1]).
 
 -export([init/1,
          terminate/2,
@@ -13,10 +19,15 @@
          handle_info/2,
          code_change/3]).
 
+-include_lib("eunit/include/eunit.hrl").
+
 
 %% Specs
 
 -record(event_queue_st, { queue :: queue:queue() }). % TODO: queue(event())
+
+-spec start_link() -> {ok, pid()}.
+-spec stop(pid()) -> ok.
 
 
 %% API
@@ -29,8 +40,29 @@ start_link() ->
 stop(Pid) ->
     ok = tfsp_event:stop(Pid).
 
-pull(Pid) ->
-    gen_event:call(Pid, ?MODULE, pull).
+
+%% Direct assertions
+
+assert_immediate(Event, Pid) ->
+    ?assertEqual({ok, Event}, pull(Pid)).
+
+assert_immediate_type(EventType, Pid) ->
+    ?assertMatch({ok, {EventType, _}}, pull(Pid)).
+
+assert_immediate_end(Pid) ->
+    ?assertEqual(none, pull(Pid)).
+
+
+%% Test generators
+
+assert_immediate_(Event, Pid) ->
+    ?_assertEqual({ok, Event}, pull(Pid)).
+
+assert_immediate_type_(EventType, Pid) ->
+    ?_assertMatch({ok, {EventType, _}}, pull(Pid)).
+
+assert_immediate_end_(Pid) ->
+    ?_assertEqual(none, pull(Pid)).
 
 
 %% gen_event callbacks
@@ -61,3 +93,9 @@ handle_info(_Msg, St) ->
 
 code_change(_OldVsn, St, _Extra) ->
     {ok, St}.
+
+
+%% Utilities
+
+pull(Pid) ->
+    gen_event:call(Pid, ?MODULE, pull).

@@ -43,77 +43,77 @@ deleted_tests() ->
 
 %% Test implementations
 
-scan_once(Table) ->
+scan_once(#fs_ctx{ ent_tab = EntTab } = FsCtx) ->
     {"with single scan",
-     [?_assertEqual(7, tfsp_scanner:scan(Table, root(), <<"">>, [])),
-      ?_assertEqual(7, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(7, tfsp_scanner:scan(FsCtx, <<"">>, [])),
+      ?_assertEqual(7, fs_ent_tab:count(EntTab))]}.
 
-scan_once_ignore(Table) ->
+scan_once_ignore(#fs_ctx { ent_tab = EntTab } = FsCtx) ->
     IgnoreRes = ignoreRes([?TFSP_RE, ?DAT_RE]),
     {"with ignored pattern list",
-     [?_assertEqual(5, tfsp_scanner:scan(Table, root(), <<"">>, IgnoreRes)),
-      ?_assertEqual(5, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(5, tfsp_scanner:scan(FsCtx, <<"">>, IgnoreRes)),
+      ?_assertEqual(5, fs_ent_tab:count(EntTab))]}.
 
-scan_twice(Table) ->
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+scan_twice(#fs_ctx { ent_tab = EntTab } = FsCtx) ->
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     {"with duplicate scan",
-     [?_assertEqual(0, tfsp_scanner:scan(Table, root(), <<"">>, [])),
-      ?_assertEqual(7, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(0, tfsp_scanner:scan(FsCtx, <<"">>, [])),
+      ?_assertEqual(7, fs_ent_tab:count(EntTab))]}.
 
-scan_twice_modify(Table) ->
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+scan_twice_modify(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
     {"with modification in between",
-     [?_assertEqual(1, tfsp_scanner:scan(Table, root(), <<"">>, [])),
-      ?_assertEqual(7, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(1, tfsp_scanner:scan(FsCtx, <<"">>, [])),
+      ?_assertEqual(7, fs_ent_tab:count(EntTab))]}.
 
-scan_twice_create(Table) ->
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+scan_twice_create(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
     {"with creation in between",
-     [?_assertEqual(2, tfsp_scanner:scan(Table, root(), <<"">>, [])),
-      ?_assertEqual(9, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(2, tfsp_scanner:scan(FsCtx, <<"">>, [])),
+      ?_assertEqual(9, fs_ent_tab:count(EntTab))]}.
 
-scan_twice_create_modify(Table) ->
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+scan_twice_create_modify(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 2000000),
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
     {"with creation and modification in between",
-     [?_assertEqual(3, tfsp_scanner:scan(Table, root(), <<"">>, [])),
-      ?_assertEqual(9, fs_ent_tab:count(Table))]}.
+     [?_assertEqual(3, tfsp_scanner:scan(FsCtx, <<"">>, [])),
+      ?_assertEqual(9, fs_ent_tab:count(EntTab))]}.
 
-check_none_deleted(Table) ->
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+check_none_deleted(#fs_ctx { ent_tab = EntTab } = FsCtx) ->
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     {"with no deletion",
-     [?_assertEqual(0, tfsp_scanner:check_deleted(Table, root()))]}.
+     [?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx))]}.
 
-check_one_deleted(Table) ->
+check_one_deleted(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
     make_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     del_file(?SCAN_PATH, ?NEW_FILE),
     {"with one deleted",
-     [?_assertEqual(1, tfsp_scanner:check_deleted(Table, root())),
-      ?_assertEqual(0, tfsp_scanner:check_deleted(Table, root()))]}.
+     [?_assertEqual(1, tfsp_scanner:check_deleted(FsCtx)),
+      ?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx))]}.
 
-check_two_deleted(Table) ->
+check_two_deleted(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
     make_file(?SCAN_PATH, ?NEW_FILE),
     make_dir(?SCAN_PATH, ?NEW_DIR),
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
     del_file(?SCAN_PATH, ?NEW_FILE),
     del_dir(?SCAN_PATH, ?NEW_DIR),
     {"with two deleted",
-     [?_assertEqual(2, tfsp_scanner:check_deleted(Table, root())),
-      ?_assertEqual(0, tfsp_scanner:check_deleted(Table, root()))]}.
+     [?_assertEqual(2, tfsp_scanner:check_deleted(FsCtx)),
+      ?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx))]}.
 
-check_deleted_ent(Table) ->
+check_deleted_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
     make_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_scanner:scan(Table, root(), <<"">>, []),
-    {ok, ExistingEnt} = find_ent(Table, ?NEW_FILE),
+    tfsp_scanner:scan(FsCtx, <<"">>, []),
+    {ok, ExistingEnt} = find_ent(EntTab, ?NEW_FILE),
     del_file(?SCAN_PATH, ?NEW_FILE),
-    tfsp_scanner:check_deleted(Table, root()),
-    {ok, DeletedEnt} = find_ent(Table, ?NEW_FILE),
+    tfsp_scanner:check_deleted(FsCtx),
+    {ok, DeletedEnt} = find_ent(EntTab, ?NEW_FILE),
     {"whether deleted entity was marked deleted",
      [?_assertEqual(ExistingEnt#fs_ent{ deleted = true }, DeletedEnt)]}.
 
@@ -121,15 +121,18 @@ check_deleted_ent(Table) ->
 %% Fixtures
 
 setup() ->
-    set_mtime(?SCAN_PATH, ?MODIFIED_FILE, 1000000),
-    del_file(?SCAN_PATH, ?NEW_FILE),
-    del_dir(?SCAN_PATH, ?NEW_DIR),
-    fs_ent_tab:create().
+    Root = root(),
+    set_mtime(Root, ?MODIFIED_FILE, 1000000),
+    del_file(Root, ?NEW_FILE),
+    del_dir(Root, ?NEW_DIR),
+    EntTab = fs_ent_tab:create(),
+    #fs_ctx{ root       = Root,
+             ent_tab    = EntTab }.
 
-cleanup(Table) ->
-    del_file(?SCAN_PATH, ?NEW_FILE),
-    del_dir(?SCAN_PATH, ?NEW_DIR),
-    ok = fs_ent_tab:delete(Table).
+cleanup(#fs_ctx{ root = Root, ent_tab = EntTab }) ->
+    del_file(Root, ?NEW_FILE),
+    del_dir(Root, ?NEW_DIR),
+    ok = fs_ent_tab:delete(EntTab).
 
 
 %% Utilities
@@ -154,8 +157,8 @@ del_file(Dir, Filename) ->
 del_dir(Dir, Filename) ->
     file:del_dir(filename:join(Dir, Filename)).
 
-find_ent(Table, Filename) ->
-    fs_ent_tab:find(Table, Filename).
+find_ent(EntTab, Filename) ->
+    fs_ent_tab:find(EntTab, Filename).
 
 set_mtime(Dir, Filename, Mtime) ->
     FileInfo = #file_info{ mtime = Mtime },

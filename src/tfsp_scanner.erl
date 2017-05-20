@@ -6,11 +6,11 @@
 
 -module(tfsp_scanner).
 
--export([start_link/4]).
+-export([start_link/3]).
 
 -ifdef(TFSP_TEST).
--export([scan/4,
-         check_deleted/2]).
+-export([scan/3,
+         check_deleted/1]).
 -endif.
 
 -include_lib("kernel/include/file.hrl").
@@ -19,17 +19,17 @@
 
 %% Specs
 
--spec start_link(fs_ent_tab(), fs_path(), non_neg_integer(), [re:mp()]) -> pid().
+-spec start_link(fs_ctx(), non_neg_integer(), [re:mp()]) -> pid().
 
 -spec init([term()]) -> none().
--spec loop(fs_ent_tab(), fs_path(), non_neg_integer(), [re:mp()]) -> none().
+-spec loop(fs_ctx(), non_neg_integer(), [re:mp()]) -> none().
 
--spec scan(fs_ent_tab(), fs_path(), fs_path(), [re:mp()]) -> non_neg_integer().
--spec scan_ent(fs_ent_tab(), fs_path(), fs_path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
--spec update_ent(fs_ent_tab(), fs_path(), fs_path(), [re:mp()], fs_ent()) -> non_neg_integer().
--spec create_ent(fs_ent_tab(), fs_path(), fs_path(), [re:mp()]) -> non_neg_integer().
+-spec scan(fs_ctx(), fs_path(), [re:mp()]) -> non_neg_integer().
+-spec scan_ent(fs_ctx(), fs_path(), [re:mp()], non_neg_integer()) -> non_neg_integer().
+-spec update_ent(fs_ctx(), fs_path(), [re:mp()], fs_ent()) -> non_neg_integer().
+-spec create_ent(fs_ctx(), fs_path(), [re:mp()]) -> non_neg_integer().
 
--spec check_deleted(fs_ent_tab(), fs_path()) -> non_neg_integer().
+-spec check_deleted(fs_ctx()) -> non_neg_integer().
 -spec mark_deleted(fs_ent_tab(), fs_ent()) -> ok.
 
 
@@ -38,23 +38,23 @@
 % Spawns a new scanner worker with the given root path,
 % interval in seconds, and a list of regexes for ignoring
 % certain file name patterns.
-start_link(Table, Root, Interval, IgnoreRes) ->
-    spawn_link(?MODULE, init, [Table, Root, Interval, IgnoreRes]).
+start_link(FsCtx, Interval, IgnoreRes) ->
+    spawn_link(?MODULE, init, [FsCtx, Interval, IgnoreRes]).
 
 
 %% Utilities
 
 % Initialization before loop
-init([Table, Root, Interval, IgnoreRes]) ->
-    loop(Table, Root, Interval, IgnoreRes).
+init([FsCtx, Interval, IgnoreRes]) ->
+    loop(FsCtx, Interval, IgnoreRes).
 
 % Main loop
-loop(Table, Root, Interval, IgnoreRes) ->
+loop(FsCtx, Interval, IgnoreRes) ->
     timer:send_after(Interval * 1000, again),
-    _NumScanned = scan(Table, Root, <<"">>, IgnoreRes),
-    _NumDeleted = check_deleted(Table, Root),
+    _NumScanned = scan(FsCtx, <<"">>, IgnoreRes),
+    _NumDeleted = check_deleted(FsCtx),
     receive
-        again -> loop(Table, Root, Interval, IgnoreRes);
+        again -> loop(FsCtx, Interval, IgnoreRes);
         Other -> error_logger:error_msg("Unknown message: ~p~n", [Other]) % TODO: handle this better
     end.
 
@@ -62,12 +62,12 @@ loop(Table, Root, Interval, IgnoreRes) ->
 %% Scanning
 
 % Main scan routine. Returns the number of entries built.
-scan(Table, Root, Path, IgnoreRes) ->
+scan(#fs_ctx{ root = Root } = FsCtx, Path, IgnoreRes) ->
     {ok, Filenames} = path:list_dir(Root, Path),
     FullPaths = lists:map(with_path(Path), Filenames),
     AllowedPaths = lists:filter(is_path_allowed_with(IgnoreRes), FullPaths),
     lists:foldl(fun(Filename, Acc) ->
-                        scan_ent(Table, Root, Filename, IgnoreRes, Acc)
+                        scan_ent(FsCtx, Filename, IgnoreRes, Acc)
                 end, 0, AllowedPaths).
 
 with_path(Path) ->
@@ -90,38 +90,39 @@ is_path_allowed(Path, [IgnoreRe | IgnoreRes]) ->
 % If it exists, only rescans if modification time is greater
 % than stored. The accumulator stores the number of entries
 % scanned, used for a more efficient traversal with fold in scan/1.
-scan_ent(Table, Root, Filename, IgnoreRes, Acc) ->
-    case fs_ent_tab:find(Table, Filename) of
+scan_ent(#fs_ctx{ ent_tab = EntTab } = FsCtx, Filename, IgnoreRes, Acc) ->
+    case fs_ent_tab:find(EntTab, Filename) of
         {ok, Ent} ->
-            Acc + update_ent(Table, Root, Filename, IgnoreRes, Ent);
+            Acc + update_ent(FsCtx, Filename, IgnoreRes, Ent);
         none ->
-            Acc + create_ent(Table, Root, Filename, IgnoreRes)
+            Acc + create_ent(FsCtx, Filename, IgnoreRes)
     end.
 
-update_ent(Table, Root, Filename, IgnoreRes, #fs_ent{ type = Type,
-                                                      mtime = OldMtime }) ->
+update_ent(#fs_ctx{ root = Root } = FsCtx, Filename, IgnoreRes,
+           #fs_ent{ type = Type,
+                    mtime = OldMtime }) ->
     {ok, #file_info{ mtime = CurMtime }} = path:read_link_info(Root, Filename),
     Acc = case OldMtime < CurMtime of
-        true -> create_ent(Table, Root, Filename, []);
+        true -> create_ent(FsCtx, Filename, []);
         false -> 0
     end,
     case Type of
-        directory -> Acc + scan(Table, Root, Filename, IgnoreRes); % recurse if directory
+        directory -> Acc + scan(FsCtx, Filename, IgnoreRes); % recurse if directory
         _ -> Acc
     end.
 
-create_ent(Table, Root, Filename, IgnoreRes) ->
+create_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes) ->
     case fs_ent:build(Root, Filename) of
         {ok, Ent} ->
-            ok = fs_ent_tab:insert(Table, Ent),
+            ok = fs_ent_tab:insert(EntTab, Ent),
             case Ent#fs_ent.type of
                 regular -> 1;
-                directory -> 1 + scan(Table, Root, Filename, IgnoreRes) % recurse if directory
+                directory -> 1 + scan(FsCtx, Filename, IgnoreRes) % recurse if directory
             end;
         {error, _Reason} ->
             % ignore files that we can't access for whatever reason
             % error_logger:error_msg("Not adding file ~s due to error: ~p~n", [Filename, Reason]),
-            fs_ent_tab:remove(Table, Filename), % Delete old entity if it exists
+            fs_ent_tab:remove(EntTab, Filename), % Delete old entity if it exists
             0
     end.
 
@@ -132,16 +133,16 @@ create_ent(Table, Root, Filename, IgnoreRes) ->
 % with their deleted flag not set whether they still exist.
 % Those that don't get their 'deleted' flag set to true.
 % Returns the number of entries marked deleted.
-check_deleted({fs_ent_tab, Tid} = Table, Root) -> % TODO: refactor
+check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} = EntTab }) -> % TODO: refactor
     ets:foldl(fun(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
                       case Deleted of
                           true -> NumDeleted;
                           false -> case path:read_link_info(Root, Path) of
                                        {error, enoent} ->
-                                           mark_deleted(Table, Ent),
+                                           mark_deleted(EntTab, Ent),
                                            NumDeleted + 1;
                                        {error, enotdir} ->
-                                           mark_deleted(Table, Ent),
+                                           mark_deleted(EntTab, Ent),
                                            NumDeleted + 1;
                                        _ ->
                                            NumDeleted

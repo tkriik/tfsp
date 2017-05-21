@@ -5,21 +5,11 @@
 -include_lib("eunit/include/eunit.hrl").
 
 -include("fs.hrl").
-
-
-%% Constants
-
--define(ROOT, <<"test/data/ssh_server">>).
--define(HOST, "localhost").
--define(PORT, 1234).
--define(SERVER_SYSTEM_DIR, "test/data/ssh_server/etc/ssh/").
--define(SERVER_USER_DIR, "test/data/ssh_server/home/ssh_server/ssh").
--define(CLIENT_USER_DIR, "test/data/ssh_client/home/ssh_client/ssh/").
--define(CLIENT_KNOWN_HOSTS, "test/data/ssh_client/home/ssh_client/ssh/known_hosts").
--define(TIMEOUT, 5000).
+-include("ssh_defs.hrl").
 
 
 %% Main tests
+
 
 module_test_() ->
     {"Tests for the tfsp SSH server module interface",
@@ -43,41 +33,41 @@ conn_tests() ->
 
 test_start_stop() ->
     EntTab = fs_ent_tab:create(),
-    Root = path:normalize_root(?ROOT),
+    Root = path:normalize_root(?SSH_SERVER_ROOT),
     FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
-    Res = tfsp_server:start_link_ssh(FsCtx, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    Res = tfsp_server:start_link_ssh(FsCtx, ?SSH_PORT, ?SSH_SERVER_SYSTEM_DIR, ?SSH_SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
     {ok, ServerRef} = Res,
     ?assertEqual(ok, tfsp_server:stop(ServerRef)).
 
 test_connection() ->
-    Res = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
+    Res = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ConnRef} = Res,
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_channel() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
-    Res = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    Res = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ChanId} = Res,
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_subsystem() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
-    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
-    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?TIMEOUT),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
+    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
     ?assertEqual(success, Res),
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_client_send() ->
-    {ok, ConnRef} = ssh:connect(?HOST, ?PORT, client_ssh_opts(), ?TIMEOUT),
-    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?TIMEOUT),
-    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?TIMEOUT),
-    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, ?TIMEOUT)),
-    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, ?TIMEOUT)),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
+    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, ?SSH_TIMEOUT)),
+    ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, ?SSH_TIMEOUT)),
     ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)),
     timer:sleep(100), % wait for EOF to arrive
     ?assertEqual(ok, ssh:close(ConnRef)).
@@ -90,19 +80,22 @@ app_setup() ->
 
 setup() ->
     EntTab = fs_ent_tab:create(),
-    Root = path:normalize_root(?ROOT),
+    Root = path:normalize_root(?SSH_SERVER_ROOT),
     FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
-    {ok, ServerRef} = tfsp_server:start_link_ssh(FsCtx, ?PORT, ?SERVER_SYSTEM_DIR, ?SERVER_USER_DIR),
+    {ok, ServerRef} = tfsp_server:start_link_ssh(FsCtx,
+                                                 ?SSH_PORT,
+                                                 ?SSH_SERVER_SYSTEM_DIR,
+                                                 ?SSH_SERVER_USER_DIR),
     ServerRef.
 
 cleanup(ServerRef) ->
-    _ = file:delete(?CLIENT_KNOWN_HOSTS),
+    _ = file:delete(?SSH_CLIENT_KNOWN_HOSTS),
     ok = tfsp_server:stop(ServerRef).
 
 %% Utilities
 
 client_ssh_opts() ->
-    [{user_dir, ?CLIENT_USER_DIR},
+    [{user_dir, ?SSH_CLIENT_USER_DIR},
      {user_interaction, false},
      {silently_accept_hosts, true},
      {user, "ssh_client"}].

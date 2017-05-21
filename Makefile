@@ -94,6 +94,7 @@ ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl \
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_server.erl
 
 ebin/tfsp_ssh_server_tests.beam: test/tfsp_ssh_server_tests.erl \
+				 test/ssh_defs.hrl \
 				 ebin/tfsp_ssh_server.beam
 	$(ERLC) $(EFLAGS) test/tfsp_ssh_server_tests.erl
 

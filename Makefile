@@ -1,5 +1,7 @@
 OBJ=            ebin/bitset.beam \
 		ebin/bitset_tests.beam \
+		ebin/fs_tick.beam \
+		ebin/fs_tick_tests.beam \
 		ebin/event_queue.beam \
 		ebin/event_queue_tests.beam \
 		ebin/fs_ent.beam \
@@ -59,6 +61,14 @@ ebin/fs_ent_tab.beam: include/fs.hrl \
 ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 			    ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
+
+ebin/fs_tick.beam: src/fs_tick.erl
+	$(ERLC) $(EFLAGS) src/fs_tick.erl
+
+ebin/fs_tick_tests.beam: test/fs_tick_tests.erl \
+			 ebin/fs_tick.beam \
+			 ebin/tfsp_event.beam
+	$(ERLC) $(EFLAGS) test/fs_tick_tests.erl
 
 ebin/event_queue.beam: test/event_queue.erl \
 		       ebin/tfsp_event.beam

@@ -43,20 +43,20 @@ deleted_tests() ->
 
 %% Test implementations
 
-scan_once(#fs_ctx{ ev_mgr = EvMgr, ent_tab = EntTab } = FsCtx) ->
+scan_once(#fs_ctx{ ev_mgr_ref = EvMgrRef, ent_tab = EntTab } = FsCtx) ->
     Specs = lists:duplicate(7, fs_ent_created),
     {"with single scan",
      [?_assertEqual(7, tfsp_scanner:scan(FsCtx, <<"">>, [])),
       ?_assertEqual(7, fs_ent_tab:count(EntTab)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
-scan_once_ignore(#fs_ctx { ev_mgr = EvMgr, ent_tab = EntTab } = FsCtx) ->
+scan_once_ignore(#fs_ctx { ev_mgr_ref = EvMgrRef, ent_tab = EntTab } = FsCtx) ->
     IgnoreRes = ignoreRes([?TFSP_RE, ?DAT_RE]),
     Specs = lists:duplicate(5, fs_ent_created),
     {"with ignored pattern list",
      [?_assertEqual(5, tfsp_scanner:scan(FsCtx, <<"">>, IgnoreRes)),
       ?_assertEqual(5, fs_ent_tab:count(EntTab)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
 scan_twice(#fs_ctx { ent_tab = EntTab } = FsCtx) ->
     tfsp_scanner:scan(FsCtx, <<"">>, []),
@@ -64,16 +64,16 @@ scan_twice(#fs_ctx { ent_tab = EntTab } = FsCtx) ->
      [?_assertEqual(0, tfsp_scanner:scan(FsCtx, <<"">>, [])),
       ?_assertEqual(7, fs_ent_tab:count(EntTab))]}.
 
-scan_twice_modify(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsCtx) ->
+scan_twice_modify(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab } = FsCtx) ->
     Specs = lists:duplicate(8, fs_ent_created),
     tfsp_scanner:scan(FsCtx, <<"">>, []),
     set_mtime(Root, ?MODIFIED_FILE, 2000000),
     {"with modification in between",
      [?_assertEqual(1, tfsp_scanner:scan(FsCtx, <<"">>, [])),
       ?_assertEqual(7, fs_ent_tab:count(EntTab)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
-scan_twice_create(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsCtx) ->
+scan_twice_create(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab } = FsCtx) ->
     Specs = lists:duplicate(9, fs_ent_created),
     tfsp_scanner:scan(FsCtx, <<"">>, []),
     make_file(Root, ?NEW_FILE),
@@ -81,9 +81,9 @@ scan_twice_create(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsC
     {"with creation in between",
      [?_assertEqual(2, tfsp_scanner:scan(FsCtx, <<"">>, [])),
       ?_assertEqual(9, fs_ent_tab:count(EntTab)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
-scan_twice_create_modify(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsCtx) ->
+scan_twice_create_modify(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab } = FsCtx) ->
     Specs = lists:duplicate(9, fs_ent_created),
     tfsp_scanner:scan(FsCtx, <<"">>, []),
     set_mtime(Root, ?MODIFIED_FILE, 2000000),
@@ -92,36 +92,36 @@ scan_twice_create_modify(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab 
     {"with creation and modification in between",
      [?_assertEqual(3, tfsp_scanner:scan(FsCtx, <<"">>, [])),
       ?_assertEqual(9, fs_ent_tab:count(EntTab)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
 check_none_deleted(FsCtx) ->
     tfsp_scanner:scan(FsCtx, <<"">>, []),
     {"with no deletion",
      [?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx))]}.
 
-check_one_deleted(#fs_ctx{ ev_mgr = EvMgr, root = Root } = FsCtx) ->
+check_one_deleted(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root } = FsCtx) ->
     Specs = [fs_ent_deleted],
     make_file(Root, ?NEW_FILE),
     tfsp_scanner:scan(FsCtx, <<"">>, []),
-    ok = event_queue:clear(EvMgr),
+    ok = event_queue:clear(EvMgrRef),
     del_file(Root, ?NEW_FILE),
     {"with one deleted",
      [?_assertEqual(1, tfsp_scanner:check_deleted(FsCtx)),
       ?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
-check_two_deleted(#fs_ctx{ ev_mgr = EvMgr, root = Root } = FsCtx) ->
+check_two_deleted(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root } = FsCtx) ->
     Specs = [fs_ent_deleted, fs_ent_deleted],
     make_file(Root, ?NEW_FILE),
     make_dir(Root, ?NEW_DIR),
     tfsp_scanner:scan(FsCtx, <<"">>, []),
-    ok = event_queue:clear(EvMgr),
+    ok = event_queue:clear(EvMgrRef),
     del_file(Root, ?NEW_FILE),
     del_dir(Root, ?NEW_DIR),
     {"with two deleted",
      [?_assertEqual(2, tfsp_scanner:check_deleted(FsCtx)),
       ?_assertEqual(0, tfsp_scanner:check_deleted(FsCtx)),
-      ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))]}.
+      ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))]}.
 
 check_deleted_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
     make_file(Root, ?NEW_FILE),
@@ -137,18 +137,18 @@ check_deleted_ent(#fs_ctx{ root = Root, ent_tab = EntTab } = FsCtx) ->
 %% Fixtures
 
 setup() ->
-    {ok, EvMgr} = event_queue:start_link(),
+    {ok, EvMgrRef} = event_queue:start_link(),
     Root = root(),
     set_mtime(Root, ?MODIFIED_FILE, 1000000),
     del_file(Root, ?NEW_FILE),
     del_dir(Root, ?NEW_DIR),
     EntTab = fs_ent_tab:create(),
-    #fs_ctx{ ev_mgr     = EvMgr,
+    #fs_ctx{ ev_mgr_ref     = EvMgrRef,
              root       = Root,
              ent_tab    = EntTab }.
 
-cleanup(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab }) ->
-    event_queue:stop(EvMgr),
+cleanup(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab }) ->
+    event_queue:stop(EvMgrRef),
     del_file(Root, ?NEW_FILE),
     del_dir(Root, ?NEW_DIR),
     ok = fs_ent_tab:delete(EntTab).

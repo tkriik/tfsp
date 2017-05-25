@@ -33,14 +33,14 @@ stop(ProtoRef) ->
 
 %% gen_statem callbacks
 
-init([ConnHdlrRef, #fs_ctx{ ev_mgr = EvMgr } = FsCtx]) ->
+init([ConnHdlrRef, #fs_ctx{ ev_mgr_ref = EvMgrRef } = FsCtx]) ->
     Data = #proto_data{ conn_hdlr_ref   = ConnHdlrRef,
                     fs_ctx          = FsCtx },
-    ok = tfsp_event:notify_proto_hdlr_up(EvMgr, [ConnHdlrRef]),
+    ok = tfsp_event:notify_proto_hdlr_up(EvMgrRef, [ConnHdlrRef]),
     {ok, default, Data}.
 
-terminate(_Reason, _St, #proto_data{ fs_ctx = #fs_ctx{ ev_mgr = EvMgr }}) ->
-    ok = tfsp_event:notify_proto_hdlr_down(EvMgr, []),
+terminate(_Reason, _St, #proto_data{ fs_ctx = #fs_ctx{ ev_mgr_ref = EvMgrRef }}) ->
+    ok = tfsp_event:notify_proto_hdlr_down(EvMgrRef, []),
     ok.
 
 callback_mode() ->

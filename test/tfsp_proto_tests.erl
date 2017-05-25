@@ -19,8 +19,8 @@ test_start_stop() ->
     Specs = [proto_hdlr_up,
              proto_hdlr_down],
     ConnHdlrRef = self(),
-    {ok, EvMgr} = event_queue:start_link(),
-    FsCtx = #fs_ctx{ ev_mgr = EvMgr },
+    {ok, EvMgrRef} = event_queue:start_link(),
+    FsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef },
     {ok, ProtoRef} = tfsp_proto:start_link(ConnHdlrRef, FsCtx),
     tfsp_proto:stop(ProtoRef),
-    ?assertEqual(ok, event_queue:verify_strict(EvMgr, Specs)).
+    ?assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs)).

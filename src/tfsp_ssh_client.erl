@@ -57,8 +57,8 @@ handle_cast(_Msg, St) ->
     {noreply, St}.
 
 handle_msg({ssh_channel_up, ChanId, ConnRef},
-           #conn_st{ fs_ctx = #fs_ctx{ ev_mgr = EvMgr }} = St) ->
-    tfsp_event:notify_ssh_client_chan_up(EvMgr, [ChanId, ConnRef]),
+           #conn_st{ fs_ctx = #fs_ctx{ ev_mgr_ref = EvMgrRef }} = St) ->
+    tfsp_event:notify_ssh_client_chan_up(EvMgrRef, [ChanId, ConnRef]),
     {ok, St};
 handle_msg(_Msg, St) ->
     {ok, St}.

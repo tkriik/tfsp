@@ -111,11 +111,11 @@ update_ent(#fs_ctx{ root = Root } = FsCtx, Filename, IgnoreRes,
         _ -> Acc
     end.
 
-create_ent(#fs_ctx{ ev_mgr = EvMgr, root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes) ->
+create_ent(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab } = FsCtx, Filename, IgnoreRes) ->
     case fs_ent:build(Root, Filename) of
         {ok, Ent} ->
             ok = fs_ent_tab:insert(EntTab, Ent),
-            ok = tfsp_event:notify_fs_ent_created(EvMgr, Ent),
+            ok = tfsp_event:notify_fs_ent_created(EvMgrRef, Ent),
             case Ent#fs_ent.type of
                 regular -> 1;
                 directory -> 1 + scan(FsCtx, Filename, IgnoreRes) % recurse if directory
@@ -151,7 +151,7 @@ check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} } = FsCtx) -> % 
                       end
               end, 0, Tid).
 
-mark_deleted(#fs_ctx{ ev_mgr = EvMgr, ent_tab = EntTab }, Ent) ->
+mark_deleted(#fs_ctx{ ev_mgr_ref = EvMgrRef, ent_tab = EntTab }, Ent) ->
     DeletedEnt = Ent#fs_ent{ deleted = true },
     ok = fs_ent_tab:insert(EntTab, DeletedEnt),
-    ok = tfsp_event:notify_fs_ent_deleted(EvMgr, DeletedEnt).
+    ok = tfsp_event:notify_fs_ent_deleted(EvMgrRef, DeletedEnt).

@@ -10,7 +10,7 @@
 
 %% Specs
 
--record(fixture_st, { ev_mgr    :: pid(),
+-record(fixture_st, { ev_mgr_ref    :: pid(),
                       server    :: pid(),
                       client    :: pid() }).
 
@@ -26,37 +26,37 @@ client_test_() ->
 
 %% Test definitions
 
-client_event_test(#fixture_st { ev_mgr = EvMgr }) ->
+client_event_test(#fixture_st { ev_mgr_ref = EvMgrRef }) ->
     Specs = [ssh_client_chan_up],
     {"client event sequence",
-     ?_assertEqual(ok, event_queue:verify_strict(EvMgr, Specs))}.
+     ?_assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs))}.
 
 
 %% Fixtures
 
 setup() ->
-    {ok, EvMgr} = event_queue:start_link(),
+    {ok, EvMgrRef} = event_queue:start_link(),
 
     ServerFsCtx = #fs_ctx{ root = path:normalize_root(?SSH_SERVER_ROOT) },
     {ok, ServerRef} = tfsp_server:start_link_ssh(ServerFsCtx,
                                                  ?SSH_PORT,
                                                  ?SSH_SERVER_SYSTEM_DIR,
                                                  ?SSH_SERVER_USER_DIR),
-    ClientFsCtx = #fs_ctx{ ev_mgr = EvMgr,
+    ClientFsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef,
                            root   = path:normalize_root(?SSH_CLIENT_ROOT) },
     {ok, ClientRef} = tfsp_client:start_link_ssh(ClientFsCtx,
                                                  ?SSH_HOST,
                                                  ?SSH_PORT,
                                                  ?SSH_TIMEOUT,
                                                  ?SSH_CLIENT_OPTS),
-    #fixture_st{ ev_mgr = EvMgr,
+    #fixture_st{ ev_mgr_ref = EvMgrRef,
                  server = ServerRef,
                  client = ClientRef }.
 
-cleanup(#fixture_st{ ev_mgr = EvMgr,
+cleanup(#fixture_st{ ev_mgr_ref = EvMgrRef,
                      server = ServerRef,
                      client = ClientRef }) ->
-    ok = event_queue:stop(EvMgr),
+    ok = event_queue:stop(EvMgrRef),
     ok = tfsp_server:stop(ServerRef),
     ok = tfsp_client:stop(ClientRef),
     ok = file:delete(?SSH_CLIENT_KNOWN_HOSTS).

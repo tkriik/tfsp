@@ -7,6 +7,8 @@
 
          notify_fs_ent_created/2,
          notify_fs_ent_deleted/2,
+         notify_proto_hdlr_up/2,
+         notify_proto_hdlr_down/2,
          notify_ssh_client_chan_up/2,
          notify_misc/2]).
 
@@ -19,8 +21,7 @@
 -spec add_handler(pid(), atom(), term()) -> ok | {error, term()}.
 -spec stop(pid()) -> ok.
 
--spec notify_fs_ent_created(pid(), fs_ent()) -> ok.
--spec notify_misc(pid(), term()) -> ok.
+-spec notify(pid(), term()) -> ok.
 
 
 %% API
@@ -39,6 +40,12 @@ notify_fs_ent_created(Pid, Ent) ->
 
 notify_fs_ent_deleted(Pid, Ent) ->
     notify(Pid, {fs_ent_deleted, Ent}).
+
+notify_proto_hdlr_up(Pid, Extra) ->
+    notify(Pid, {proto_hdlr_up, Extra}).
+
+notify_proto_hdlr_down(Pid, Extra) ->
+    notify(Pid, {proto_hdlr_down, Extra}).
 
 notify_ssh_client_chan_up(Pid, Extra) ->
     notify(Pid, {ssh_client_chan_up, Extra}).

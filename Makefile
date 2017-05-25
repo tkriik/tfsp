@@ -9,6 +9,8 @@ OBJ=            ebin/bitset.beam \
                 ebin/path.beam \
                 ebin/tfsp_client.beam \
                 ebin/tfsp_event.beam \
+                ebin/tfsp_proto.beam \
+                ebin/tfsp_proto_tests.beam \
 		ebin/tfsp_scanner.beam \
 		ebin/tfsp_scanner_tests.beam \
 		ebin/tfsp_server.beam \
@@ -58,7 +60,8 @@ ebin/fs_ent_tab_tests.beam: test/fs_ent_tab_tests.erl \
 			    ebin/fs_ent_tab.beam
 	$(ERLC) $(EFLAGS) test/fs_ent_tab_tests.erl
 
-ebin/event_queue.beam: test/event_queue.erl
+ebin/event_queue.beam: test/event_queue.erl \
+		       ebin/tfsp_event.beam
 	$(ERLC) $(EFLAGS) test/event_queue.erl
 
 ebin/event_queue_tests.beam: test/event_queue_tests.erl \
@@ -73,13 +76,23 @@ ebin/tfsp_client.beam: src/tfsp_client.erl \
 		       include/fs.hrl
 	$(ERLC) $(EFLAGS) src/tfsp_client.erl
 
-ebin/tfsp_event.beam: src/tfsp_event.erl
+ebin/tfsp_event.beam: src/tfsp_event.erl \
+		      include/fs.hrl
 	$(ERLC) $(EFLAGS) src/tfsp_event.erl
+
+ebin/tfsp_proto.beam: src/tfsp_proto.erl
+	$(ERLC) $(EFLAGS) src/tfsp_proto.erl
+
+ebin/tfsp_proto_tests.beam: test/tfsp_proto_tests.erl \
+			    include/fs.hrl \
+			    ebin/tfsp_proto.beam
+	$(ERLC) $(EFLAGS) test/tfsp_proto_tests.erl
 
 ebin/tfsp_scanner.beam:	include/fs.hrl \
 			src/tfsp_scanner.erl \
 			ebin/fs_ent.beam \
-			ebin/fs_ent_tab.beam
+			ebin/fs_ent_tab.beam \
+			ebin/tfsp_event.beam
 	$(ERLC) $(EFLAGS) src/tfsp_scanner.erl
 
 ebin/tfsp_scanner_tests.beam: test/tfsp_scanner_tests.erl \
@@ -92,7 +105,8 @@ ebin/tfsp_server.beam: src/tfsp_server.erl \
 
 ebin/tfsp_ssh_client.beam: src/tfsp_ssh_client.erl \
 			   include/conn.hrl \
-			   include/fs.hrl
+			   include/fs.hrl \
+			   ebin/tfsp_event.beam
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_client.erl
 
 ebin/tfsp_ssh_client_tests.beam: test/tfsp_ssh_client_tests.erl \

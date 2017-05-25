@@ -25,6 +25,8 @@ module_test_() ->
        fun insert_one/1,
        fun insert_same_twice/1,
        fun insert_different_twice/1,
+       fun first_empty/1,
+       fun first_next/1,
        fun remove/1,
        fun remove_one/1,
        fun find_nonexistent/1,
@@ -68,6 +70,17 @@ insert_different_twice(Table) ->
     ok = fs_ent_tab:insert(Table, ?ENT_B0),
     {"count after two different insertions",
      [?_assertEqual(2, fs_ent_tab:count(Table))]}.
+
+first_empty(Table) ->
+    {"first element of an empty table",
+     ?_assertEqual(none, fs_ent_tab:first(Table))}.
+
+first_next(Table) ->
+    ok = fs_ent_tab:insert(Table, ?ENT_A0),
+    ok = fs_ent_tab:insert(Table, ?ENT_B0),
+    {"first element after two insertions",
+     [?_assertEqual({ok, <<"A">>}, fs_ent_tab:first(Table)),
+      ?_assertEqual({ok, <<"B">>}, fs_ent_tab:next(Table, <<"A">>))]}.
 
 remove(Table) ->
     ok = fs_ent_tab:insert(Table, ?ENT_A0),

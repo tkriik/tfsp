@@ -3,11 +3,11 @@
 -module(fs_ent_tab).
 -export([create/0,
          delete/1,
-
          insert/2,
          find/2,
+         first/1,
+         next/2,
          remove/2,
-
          count/1]).
 
 -include("fs.hrl").
@@ -25,6 +25,9 @@
 -spec insert(handle(), fs_ent()) -> ok.
 -spec find(handle(), fs_path()) -> {ok, fs_ent()} | none.
 -spec remove(handle(), fs_path()) -> ok.
+
+-spec first(handle()) -> {ok, fs_path()} | none.
+-spec next(handle(), fs_path()) -> {ok, fs_path()} | none.
 
 -spec count(handle()) -> non_neg_integer().
 
@@ -57,6 +60,18 @@ find({fs_ent_tab, Tid}, Path) ->
 remove({fs_ent_tab, Tid}, Path) ->
     true = ets:delete(Tid, Path),
     ok.
+
+first({fs_ent_tab, Tid}) ->
+    case ets:first(Tid) of
+        '$end_of_table' -> none;
+        Path -> {ok, Path}
+    end.
+
+next({fs_ent_tab, Tid}, Path1) ->
+    case ets:next(Tid, Path1) of
+        '$end_of_table' -> none;
+        Path2 -> {ok, Path2}
+    end.
 
 % Returns the number of entries in the table.
 count({fs_ent_tab, Tid}) ->

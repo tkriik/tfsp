@@ -9,9 +9,14 @@
 
          notify_fs_ent_created/2,
          notify_fs_ent_deleted/2,
+
          notify_proto_hdlr_up/2,
+         notify_proto_hdlr_handshake/2,
+         notify_proto_hdlr_sync_loop/2,
          notify_proto_hdlr_down/2,
+
          notify_ssh_client_chan_up/2,
+
          notify_misc/2]).
 
 -include("fs.hrl").
@@ -41,20 +46,34 @@ add_handler(EvMgrRef, Module, Args) ->
 add_fs_tick_sup_handler(EvMgrRef, RecvRef) ->
     gen_event:add_sup_handler(EvMgrRef, fs_tick, [RecvRef]).
 
+% File system entity events
+
 notify_fs_ent_created(EvMgrRef, Ent) ->
     notify(EvMgrRef, {fs_ent_created, Ent}).
 
 notify_fs_ent_deleted(EvMgrRef, Ent) ->
     notify(EvMgrRef, {fs_ent_deleted, Ent}).
 
+% Protocol handler events
+
 notify_proto_hdlr_up(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_up, Extra}).
+
+notify_proto_hdlr_handshake(EvMgrRef, Extra) ->
+    notify(EvMgrRef, {proto_hdlr_handshake, Extra}).
+
+notify_proto_hdlr_sync_loop(EvMgrRef, Extra) ->
+    notify(EvMgrRef, {proto_hdlr_sync_loop, Extra}).
 
 notify_proto_hdlr_down(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_down, Extra}).
 
+% SSH events
+
 notify_ssh_client_chan_up(EvMgrRef, Extra) ->
     notify(EvMgrRef, {ssh_client_chan_up, Extra}).
+
+% Misc events (mainly for testing)
 
 notify_misc(EvMgrRef, Event) ->
     notify(EvMgrRef, {misc, Event}).

@@ -17,10 +17,13 @@ module_test_() ->
 
 test_start_stop() ->
     Specs = [proto_hdlr_up,
+             proto_hdlr_handshake,
              proto_hdlr_down],
     ConnHdlrRef = self(),
     {ok, EvMgrRef} = event_queue:start_link(),
-    FsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef },
+    EntTab = fs_ent_tab:create(),
+    FsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef,
+                     ent_tab    = EntTab },
     {ok, ProtoRef} = tfsp_proto:start_link(ConnHdlrRef, FsCtx),
     tfsp_proto:stop(ProtoRef),
     ?assertEqual(ok, event_queue:verify_strict(EvMgrRef, Specs)).

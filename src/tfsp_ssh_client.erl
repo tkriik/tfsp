@@ -1,16 +1,14 @@
 -module(tfsp_ssh_client).
 -behaviour(ssh_channel).
 
--export([start_link/6]).
+-export([start_link/5]).
 
 -export([init/1,
          terminate/2,
-
          handle_call/3,
          handle_cast/2,
          handle_msg/2,
          handle_ssh_msg/2,
-
          code_change/3]).
 
 -include("conn.hrl").
@@ -19,23 +17,21 @@
 
 %% Specs
 
--spec start_link(fs_path(),
-                 fs_ent_tab(),
+-spec start_link(fs_ctx(),
                  string(),
                  integer(),
                  integer() | infinity,
-                 fs_path()) -> {ok, pid()} | {error, term()}.
+                 [term()]) -> {ok, pid()} | {error, term()}.
 
 
 %% API
 
-start_link(Root, FsTab, Host, Port, Timeout, UserDir) ->
-    Opts = [{user_dir, UserDir}],
-    case ssh:connect(Host, Port, Opts, Timeout) of
+start_link(FsCtx, Host, Port, Timeout, SshOpts) ->
+    case ssh:connect(Host, Port, SshOpts, Timeout) of
         {ok, ConnRef} ->
             case ssh_connection:session_channel(ConnRef, Timeout) of
                 {ok, ChanId} ->
-                    ssh_channel:start_link(ConnRef, ChanId, tfsp_ssh_client, [Root, FsTab]);
+                    ssh_channel:start_link(ConnRef, ChanId, tfsp_ssh_client, [FsCtx]);
                 {error, Reason} ->
                     {error, Reason}
             end;
@@ -46,8 +42,9 @@ start_link(Root, FsTab, Host, Port, Timeout, UserDir) ->
 
 %% SSH channel callbacks
 
-init([_Root, _FsTab]) ->
-    St = #conn_st{ buffer = <<>> },
+init([FsCtx]) ->
+    St = #conn_st{ fs_ctx   = FsCtx,
+                   buffer   = <<>> },
     {ok, St}.
 
 terminate(_Reason, _St) ->
@@ -59,6 +56,10 @@ handle_call(_Msg, _From, St) ->
 handle_cast(_Msg, St) ->
     {noreply, St}.
 
+handle_msg({ssh_channel_up, ChanId, ConnRef},
+           #conn_st{ fs_ctx = #fs_ctx{ ev_mgr = EvMgr }} = St) ->
+    tfsp_event:notify_ssh_client_chan_up(EvMgr, [ChanId, ConnRef]),
+    {ok, St};
 handle_msg(_Msg, St) ->
     {ok, St}.
 

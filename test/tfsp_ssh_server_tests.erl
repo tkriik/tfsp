@@ -41,13 +41,13 @@ test_start_stop() ->
     ?assertEqual(ok, tfsp_server:stop(ServerRef)).
 
 test_connection() ->
-    Res = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    Res = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ConnRef} = Res,
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_channel() ->
-    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     Res = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
     ?assertMatch({ok, _}, Res),
     {ok, ChanId} = Res,
@@ -55,7 +55,7 @@ test_channel() ->
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_subsystem() ->
-    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
     Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
     ?assertEqual(success, Res),
@@ -63,7 +63,7 @@ test_subsystem() ->
     ?assertEqual(ok, ssh:close(ConnRef)).
 
 test_client_send() ->
-    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, client_ssh_opts(), ?SSH_TIMEOUT),
+    {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
     success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
     ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, ?SSH_TIMEOUT)),
@@ -91,11 +91,3 @@ setup() ->
 cleanup(ServerRef) ->
     _ = file:delete(?SSH_CLIENT_KNOWN_HOSTS),
     ok = tfsp_server:stop(ServerRef).
-
-%% Utilities
-
-client_ssh_opts() ->
-    [{user_dir, ?SSH_CLIENT_USER_DIR},
-     {user_interaction, false},
-     {silently_accept_hosts, true},
-     {user, "ssh_client"}].

@@ -7,6 +7,7 @@
 
          notify_fs_ent_created/2,
          notify_fs_ent_deleted/2,
+         notify_ssh_client_chan_up/2,
          notify_misc/2]).
 
 -include("fs.hrl").
@@ -38,6 +39,9 @@ notify_fs_ent_created(Pid, Ent) ->
 
 notify_fs_ent_deleted(Pid, Ent) ->
     notify(Pid, {fs_ent_deleted, Ent}).
+
+notify_ssh_client_chan_up(Pid, Extra) ->
+    notify(Pid, {ssh_client_chan_up, Extra}).
 
 notify_misc(Pid, Event) ->
     notify(Pid, {misc, Event}).

@@ -9,6 +9,8 @@ OBJ=            ebin/bitset.beam \
 		ebin/fs_ent_tab.beam \
                 ebin/fs_ent_tab_tests.beam \
                 ebin/path.beam \
+                ebin/wire.beam \
+                ebin/wire_tests.beam \
                 ebin/tfsp_client.beam \
                 ebin/tfsp_event.beam \
                 ebin/tfsp_proto.beam \
@@ -80,6 +82,14 @@ ebin/event_queue_tests.beam: test/event_queue_tests.erl \
 
 ebin/path.beam: src/path.erl
 	$(ERLC) $(EFLAGS) src/path.erl
+
+ebin/wire.beam: src/wire.erl \
+		include/fs.hrl
+	$(ERLC) $(EFLAGS) src/wire.erl
+
+ebin/wire_tests.beam: test/wire_tests.erl \
+		      ebin/wire.beam
+	$(ERLC) $(EFLAGS) test/wire_tests.erl
 
 ebin/tfsp_client.beam: src/tfsp_client.erl \
 		       ebin/tfsp_ssh_client.beam \

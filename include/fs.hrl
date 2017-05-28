@@ -4,13 +4,16 @@
 -type fs_path() :: binary().
 
 %% File system entity metadata.
--record(fs_ent, { path      :: fs_path(),
-                  sha256    :: binary() | undefined,
-                  size      :: non_neg_integer() | undefined,
+-record(fs_ent, { % both regular file and directory entities shared these 
                   type      :: regular | directory,
-                  access    :: read | write | read_write | none | undefined,
+                  path      :: fs_path(),
                   mtime     :: non_neg_integer(),
-                  deleted   :: boolean() }).
+                  access    :: read | write | read_write | none | undefined,
+                  deleted   :: boolean(),
+
+                  % only regular files have size and sha256 set
+                  size      :: non_neg_integer() | undefined,
+                  sha256    :: binary() | undefined }).
 
 -type fs_ent() :: #fs_ent{}.
 

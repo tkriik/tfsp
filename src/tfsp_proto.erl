@@ -40,14 +40,14 @@ stop(ProtoRef) ->
 
 init([ConnHdlrRef, #fs_ctx{ ev_mgr_ref  = EvMgrRef,
                             ent_tab     = EntTab }]) ->
-    Data = #proto_data{ conn_hdlr_ref   = ConnHdlrRef,
-                        ev_mgr_ref      = EvMgrRef,
-                        ent_tab         = EntTab,
-                        cur_path        = undefined },
+    ProtoData = #proto_data{ conn_hdlr_ref   = ConnHdlrRef,
+                             ev_mgr_ref      = EvMgrRef,
+                             ent_tab         = EntTab,
+                             cur_path        = undefined },
     ok = tfsp_event:add_fs_tick_sup_handler(EvMgrRef, self()),
     ok = tfsp_event:notify_proto_hdlr_up(EvMgrRef, []),
     ok = start_handshake(self()),
-    {ok, handshake, Data}.
+    {ok, handshake, ProtoData}.
 
 terminate(_Reason, _St, #proto_data{ ev_mgr_ref = EvMgrRef }) ->
     ok = tfsp_event:notify_proto_hdlr_down(EvMgrRef, []),
@@ -56,37 +56,40 @@ terminate(_Reason, _St, #proto_data{ ev_mgr_ref = EvMgrRef }) ->
 callback_mode() ->
     state_functions.
 
-code_change(_OldVsn, St, Data, _Extra) ->
-    {ok, St, Data}.
+code_change(_OldVsn, St, ProtoData, _Extra) ->
+    {ok, St, ProtoData}.
 
 
 %% State callbacks
 
 handshake(cast, start_handshake, #proto_data{ ev_mgr_ref    = EvMgrRef,
-                                              ent_tab       = EntTab } = Data) ->
+                                              ent_tab       = EntTab } = ProtoData) ->
     tfsp_event:notify_proto_hdlr_handshake(EvMgrRef, []),
     case fs_ent_tab:first(EntTab) of
         {ok, Path} ->
             ok = cont_handshake(self()),
-            {keep_state, Data#proto_data{ cur_path = Path }};
+            {keep_state, ProtoData#proto_data{ cur_path = Path }};
         none ->
-            {next_state, sync_loop, Data#proto_data{ cur_path = undefined }}
+            {next_state, sync_loop, ProtoData#proto_data{ cur_path = undefined }}
     end;
-handshake(cast, cont_handshake, #proto_data{ ent_tab    = EntTab,
-                                             cur_path   = CurPath } = Data) ->
-    %% TODO: send current path entity
+handshake(cast, cont_handshake, #proto_data{ ev_mgr_ref = EvMgrRef,
+                                             ent_tab    = EntTab,
+                                             cur_path   = CurPath } = ProtoData) ->
+    {ok, Ent} = fs_ent_tab:find(EntTab, CurPath),
+    ok = send_ent_info(Ent, ProtoData),
+    tfsp_event:notify_proto_hdlr_fs_ent_info_sent(EvMgrRef, Ent),
     case fs_ent_tab:next(EntTab, CurPath) of
         {ok, Path} ->
             ok = cont_handshake(self()),
-            {keep_state, Data#proto_data{ cur_path = Path }};
+            {keep_state, ProtoData#proto_data{ cur_path = Path }};
         none ->
-            {next_state, sync_loop, Data#proto_data{ cur_path = undefined }}
+            {next_state, sync_loop, ProtoData#proto_data{ cur_path = undefined }}
     end;
-handshake(EventType, EventContent, Data) ->
+handshake(EventType, EventContent, ProtoData) ->
     ?DEBUG([{event_type, EventType},
             {event_content, EventContent},
-            {data, Data}]),
-    {keep_state, Data}.
+            {data, ProtoData}]),
+    {keep_state, ProtoData}.
 
 
 %% Utilities
@@ -96,3 +99,8 @@ start_handshake(ProtoRef) ->
 
 cont_handshake(ProtoRef) ->
     gen_statem:cast(ProtoRef, cont_handshake).
+
+send_ent_info(Ent, #proto_data{ conn_hdlr_ref = ConnHdlrRef }) ->
+    Frame = wire:pack_fs_ent_info(Ent),
+    ConnHdlrRef ! {fs_ent_info, Frame},
+    ok.

@@ -11,9 +11,10 @@
          notify_fs_ent_deleted/2,
 
          notify_proto_hdlr_up/2,
+         notify_proto_hdlr_down/2,
          notify_proto_hdlr_handshake/2,
          notify_proto_hdlr_sync_loop/2,
-         notify_proto_hdlr_down/2,
+         notify_proto_hdlr_fs_ent_info_sent/2,
 
          notify_ssh_client_chan_up/2,
 
@@ -64,6 +65,9 @@ notify_proto_hdlr_handshake(EvMgrRef, Extra) ->
 
 notify_proto_hdlr_sync_loop(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_sync_loop, Extra}).
+
+notify_proto_hdlr_fs_ent_info_sent(EvMgrRef, Ent) ->
+    notify(EvMgrRef, {proto_hdlr_fs_ent_info_sent, Ent}).
 
 notify_proto_hdlr_down(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_down, Extra}).

@@ -5,7 +5,8 @@
 -behaviour(ssh_daemon_channel).
 
 -export([start_daemon/4,
-         stop_daemon/1]).
+         stop_daemon/1,
+         subsystem_name/0]).
 
 -export([init/1,
          handle_ssh_msg/2,
@@ -16,7 +17,7 @@
 -include("fs.hrl").
 
 
-%% Specs
+%%% Specs
 
 -spec start_daemon(fs_ctx(),
                    non_neg_integer(),
@@ -25,10 +26,10 @@
 -spec stop_daemon(ssh:ssh_daemon_ref()) -> ok.
 
 
-%% API
+%%% API
 
 start_daemon(FsCtx, Port, SystemDir, UserDir) ->
-    SubsystemSpec = {"tfsp_ssh_server", {tfsp_ssh_server, [FsCtx]}},
+    SubsystemSpec = {subsystem_name(), {?MODULE, [FsCtx]}},
     SshOpts = [{subsystems, [SubsystemSpec]},
                {ssh_cli, no_cli},
                {system_dir, SystemDir},
@@ -39,17 +40,25 @@ start_daemon(FsCtx, Port, SystemDir, UserDir) ->
 stop_daemon(DaemonRef) ->
     ssh:stop_daemon(DaemonRef).
 
+subsystem_name() ->
+    ?MODULE_STRING.
 
-%% SSH daemon channel allbacks
 
-init([_FsCtx]) ->
-    St = #conn_st{ buffer = <<>> },
+%%% SSH daemon channel callbacks
+
+init([FsCtx]) ->
+    St = #conn_st{ fs_ctx = FsCtx,
+                   buffer = <<>> },
     {ok, St}.
 
+handle_msg({ssh_channel_up, _ChanId, _ConnRef},
+           #conn_st{ fs_ctx = #fs_ctx{ ev_mgr_ref = EvMgrRef } } = St) ->
+    tfsp_event:notify_ssh_server_chan_up(EvMgrRef, undefined),
+    {ok, St};
 handle_msg(_Msg, St) ->
     {ok, St}.
 
-% Got data from channel, append to channel state buffer.
+%% Got data from channel, append to channel state buffer.
 handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}},
                #conn_st { buffer = Buffer } = St) ->
     _Buffer = <<Buffer/binary, Data/binary>>,

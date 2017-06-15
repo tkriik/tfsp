@@ -15,7 +15,7 @@
 -include("fs.hrl").
 
 
-%% Specs
+%%% Specs
 
 -spec start_link(fs_ctx(),
                  string(),
@@ -24,14 +24,14 @@
                  [term()]) -> {ok, pid()} | {error, term()}.
 
 
-%% API
+%%% API
 
 start_link(FsCtx, Host, Port, Timeout, SshOpts) ->
     case ssh:connect(Host, Port, SshOpts, Timeout) of
         {ok, ConnRef} ->
             case ssh_connection:session_channel(ConnRef, Timeout) of
                 {ok, ChanId} ->
-                    ssh_channel:start_link(ConnRef, ChanId, tfsp_ssh_client, [FsCtx]);
+                    ssh_channel:start_link(ConnRef, ChanId, ?MODULE, [FsCtx, Timeout]);
                 {error, Reason} ->
                     {error, Reason}
             end;
@@ -40,10 +40,11 @@ start_link(FsCtx, Host, Port, Timeout, SshOpts) ->
     end.
 
 
-%% SSH channel callbacks
+%%% SSH channel callbacks
 
-init([FsCtx]) ->
+init([FsCtx, Timeout]) ->
     St = #conn_st{ fs_ctx   = FsCtx,
+                   timeout  = Timeout,
                    buffer   = <<>> },
     {ok, St}.
 
@@ -57,13 +58,24 @@ handle_cast(_Msg, St) ->
     {noreply, St}.
 
 handle_msg({ssh_channel_up, ChanId, ConnRef},
-           #conn_st{ fs_ctx = #fs_ctx{ ev_mgr_ref = EvMgrRef }} = St) ->
-    tfsp_event:notify_ssh_client_chan_up(EvMgrRef, [ChanId, ConnRef]),
-    {ok, St};
+           #conn_st{ fs_ctx     = #fs_ctx{ ev_mgr_ref = EvMgrRef },
+                     timeout    = Timeout } = St) ->
+    case ssh_connection:subsystem(ConnRef,
+                                  ChanId,
+                                  tfsp_ssh_server:subsystem_name(),
+                                  Timeout) of
+        success ->
+            tfsp_event:notify_ssh_client_chan_up(EvMgrRef, [ChanId, ConnRef]),
+            {ok, St};
+        failure ->
+            {stop, ChanId, St};
+        {error, _Reason} ->
+            {stop, ChanId, St}
+    end;
 handle_msg(_Msg, St) ->
     {ok, St}.
 
-% Got data from channel, append to connection state buffer.
+%% Got data from channel, append to connection state buffer.
 handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}},
                #conn_st { buffer = Buffer } = St) ->
     _Buffer = <<Buffer/binary, Data/binary>>,

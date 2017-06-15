@@ -19,14 +19,15 @@ OBJ=            ebin/bitset.beam \
 		ebin/tfsp_scanner_tests.beam \
 		ebin/tfsp_server.beam \
 		ebin/tfsp_ssh_client.beam \
-		ebin/tfsp_ssh_client_tests.beam \
 		ebin/tfsp_ssh_server.beam \
-		ebin/tfsp_ssh_server_tests.beam
+		ebin/tfsp_ssh_server_tests.beam \
+		ebin/tfsp_sup.beam \
+		ebin/tfsp_sup_tests.beam
 
 ERL=		erl
 ERLC=		erlc
 DFLAGS=		-D TFSP_TEST
-EFLAGS=         -I include/ -o ebin/ $(DFLAGS)
+EFLAGS=         -I include/ -o ebin/ +debug_info $(DFLAGS)
 
 all: $(OBJ)
 
@@ -129,14 +130,10 @@ ebin/tfsp_ssh_client.beam: src/tfsp_ssh_client.erl \
 			   ebin/tfsp_event.beam
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_client.erl
 
-ebin/tfsp_ssh_client_tests.beam: test/tfsp_ssh_client_tests.erl \
-				 test/ssh_defs.hrl \
-				 ebin/tfsp_client.beam
-	$(ERLC) $(EFLAGS) test/tfsp_ssh_client_tests.erl
-
 ebin/tfsp_ssh_server.beam: src/tfsp_ssh_server.erl \
 			   include/conn.hrl \
-			   include/fs.hrl
+			   include/fs.hrl \
+			   ebin/tfsp_event.beam
 	$(ERLC) $(EFLAGS) src/tfsp_ssh_server.erl
 
 ebin/tfsp_ssh_server_tests.beam: test/tfsp_ssh_server_tests.erl \
@@ -144,7 +141,20 @@ ebin/tfsp_ssh_server_tests.beam: test/tfsp_ssh_server_tests.erl \
 				 ebin/tfsp_server.beam
 	$(ERLC) $(EFLAGS) test/tfsp_ssh_server_tests.erl
 
+ebin/tfsp_sup.beam: src/tfsp_sup.erl \
+		    include/fs.hrl \
+		    include/transport.hrl \
+		    ebin/tfsp_client.beam \
+		    ebin/tfsp_event.beam \
+		    ebin/tfsp_scanner.beam \
+		    ebin/tfsp_server.beam
+	$(ERLC) $(EFLAGS) src/tfsp_sup.erl
+
+ebin/tfsp_sup_tests.beam: test/tfsp_sup_tests.erl \
+			  ebin/tfsp_sup.beam
+	$(ERLC) $(EFLAGS) test/tfsp_sup_tests.erl
+
 .PHONY: clean
 
 clean:
-	rm ebin/*
+	rm -f ebin/*

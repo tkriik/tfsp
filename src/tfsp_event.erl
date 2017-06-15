@@ -7,6 +7,8 @@
          add_handler/3,
          add_fs_tick_sup_handler/2,
 
+         notify_tfsp_sup_up/2,
+
          notify_fs_ent_created/2,
          notify_fs_ent_deleted/2,
 
@@ -17,13 +19,14 @@
          notify_proto_hdlr_fs_ent_info_sent/2,
 
          notify_ssh_client_chan_up/2,
+         notify_ssh_server_chan_up/2,
 
          notify_misc/2]).
 
 -include("fs.hrl").
 
 
-%% Specs
+%%% Specs
 
 -spec start_link() -> {ok, pid()}.
 -spec add_handler(pid(), atom(), term()) -> ok | {error, term()}.
@@ -33,7 +36,7 @@
 -spec notify(pid(), term()) -> ok.
 
 
-%% API
+%%% API
 
 start_link() ->
     gen_event:start_link().
@@ -47,7 +50,12 @@ add_handler(EvMgrRef, Module, Args) ->
 add_fs_tick_sup_handler(EvMgrRef, RecvRef) ->
     gen_event:add_sup_handler(EvMgrRef, fs_tick, [RecvRef]).
 
-% File system entity events
+%% Application events
+
+notify_tfsp_sup_up(EvMgrRef, Root) ->
+    notify(EvMgrRef, {tfsp_sup_up, Root}).
+
+%% File system entity events
 
 notify_fs_ent_created(EvMgrRef, Ent) ->
     notify(EvMgrRef, {fs_ent_created, Ent}).
@@ -55,7 +63,7 @@ notify_fs_ent_created(EvMgrRef, Ent) ->
 notify_fs_ent_deleted(EvMgrRef, Ent) ->
     notify(EvMgrRef, {fs_ent_deleted, Ent}).
 
-% Protocol handler events
+%% Protocol handler events
 
 notify_proto_hdlr_up(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_up, Extra}).
@@ -72,18 +80,21 @@ notify_proto_hdlr_fs_ent_info_sent(EvMgrRef, Ent) ->
 notify_proto_hdlr_down(EvMgrRef, Extra) ->
     notify(EvMgrRef, {proto_hdlr_down, Extra}).
 
-% SSH events
+%% SSH events
 
 notify_ssh_client_chan_up(EvMgrRef, Extra) ->
     notify(EvMgrRef, {ssh_client_chan_up, Extra}).
 
-% Misc events (mainly for testing)
+notify_ssh_server_chan_up(EvMgrRef, Extra) ->
+    notify(EvMgrRef, {ssh_server_chan_up, Extra}).
+
+%% Misc events (mainly for testing)
 
 notify_misc(EvMgrRef, Event) ->
     notify(EvMgrRef, {misc, Event}).
 
 
-%% Utilities
+%%% Utilities
 
 notify(EvMgrRef, Event) ->
     gen_event:notify(EvMgrRef, Event).

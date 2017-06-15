@@ -6,7 +6,8 @@
 
 -module(tfsp_scanner).
 
--export([start_link/3]).
+-export([start_link/3,
+         init/3]).
 
 -ifdef(TFSP_TEST).
 -export([scan/3,
@@ -17,11 +18,12 @@
 
 -include("fs.hrl").
 
-%% Specs
+
+%%% Specs
 
 -spec start_link(fs_ctx(), non_neg_integer(), [re:mp()]) -> pid().
 
--spec init([term()]) -> none().
+-spec init(fs_ctx(), non_neg_integer(), [re:mp()]) -> none().
 -spec loop(fs_ctx(), non_neg_integer(), [re:mp()]) -> none().
 
 -spec scan(fs_ctx(), fs_path(), [re:mp()]) -> non_neg_integer().
@@ -33,22 +35,22 @@
 -spec mark_deleted(fs_ent_tab(), fs_ent()) -> ok.
 
 
-%% API
+%%% API
 
-% Spawns a new scanner worker with the given root path,
-% interval in seconds, and a list of regexes for ignoring
-% certain file name patterns.
+%% Spawns a new scanner worker with the given root path,
+%% interval in seconds, and a list of regexes for ignoring
+%% certain file name patterns.
 start_link(FsCtx, Interval, IgnoreRes) ->
-    spawn_link(?MODULE, init, [FsCtx, Interval, IgnoreRes]).
+    {ok, spawn_link(?MODULE, init, [FsCtx, Interval, IgnoreRes])}.
 
 
-%% Utilities
+%%% Utilities
 
-% Initialization before loop
-init([FsCtx, Interval, IgnoreRes]) ->
+%% Initialization before loop, nothing as of now.
+init(FsCtx, Interval, IgnoreRes) ->
     loop(FsCtx, Interval, IgnoreRes).
 
-% Main loop
+%% Main loop
 loop(FsCtx, Interval, IgnoreRes) ->
     timer:send_after(Interval * 1000, again),
     _NumScanned = scan(FsCtx, <<"">>, IgnoreRes),
@@ -59,9 +61,9 @@ loop(FsCtx, Interval, IgnoreRes) ->
     end.
 
 
-%% Scanning
+%%% Scanning
 
-% Main scan routine. Returns the number of entries built.
+%% Main scan routine. Returns the number of entries built.
 scan(#fs_ctx{ root = Root } = FsCtx, Path, IgnoreRes) ->
     {ok, Filenames} = path:list_dir(Root, Path),
     FullPaths = lists:map(with_path(Path), Filenames),
@@ -86,10 +88,10 @@ is_path_allowed(Path, [IgnoreRe | IgnoreRes]) ->
         {match, _} -> false
     end.
 
-% Scans a new entity if it does not exist in the fs table.
-% If it exists, only rescans if modification time is greater
-% than stored. The accumulator stores the number of entries
-% scanned, used for a more efficient traversal with fold in scan/1.
+%% Scans a new entity if it does not exist in the fs table.
+%% If it exists, only rescans if modification time is greater
+%% than stored. The accumulator stores the number of entries
+%% scanned, used for a more efficient traversal with fold in scan/1.
 scan_ent(#fs_ctx{ ent_tab = EntTab } = FsCtx, Filename, IgnoreRes, Acc) ->
     case fs_ent_tab:find(EntTab, Filename) of
         {ok, Ent} ->
@@ -128,12 +130,12 @@ create_ent(#fs_ctx{ ev_mgr_ref = EvMgrRef, root = Root, ent_tab = EntTab } = FsC
     end.
 
 
-%% Deleted checking
+%%% Deleted checking
 
-% Iterates over all the entries in the fs table and checks those
-% with their deleted flag not set whether they still exist.
-% Those that don't get their 'deleted' flag set to true.
-% Returns the number of entries marked deleted.
+%% Iterates over all the entries in the fs table and checks those
+%% with their deleted flag not set whether they still exist.
+%% Those that don't get their 'deleted' flag set to true.
+%% Returns the number of entries marked deleted.
 check_deleted(#fs_ctx{ root = Root, ent_tab = {fs_ent_tab, Tid} } = FsCtx) -> % TODO: refactor
     ets:foldl(fun(#fs_ent{ path = Path, deleted = Deleted } = Ent, NumDeleted) ->
                       case Deleted of

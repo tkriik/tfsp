@@ -32,10 +32,16 @@ conn_tests() ->
 %% Test definitions
 
 test_start_stop() ->
-    EntTab = fs_ent_tab:create(),
+    EvMgrRef = event_queue:start_link(),
     Root = path:normalize_root(?SSH_SERVER_ROOT),
-    FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
-    Res = tfsp_server:start_link_ssh(FsCtx, ?SSH_PORT, ?SSH_SERVER_SYSTEM_DIR, ?SSH_SERVER_USER_DIR),
+    EntTab = fs_ent_tab:create(),
+    FsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef,
+                     ent_tab    = EntTab,
+                     root       = Root },
+    Res = tfsp_server:start_link_ssh(FsCtx,
+                                     ?SSH_PORT,
+                                     ?SSH_SERVER_SYSTEM_DIR,
+                                     ?SSH_SERVER_USER_DIR),
     ?assertMatch({ok, _}, Res),
     {ok, ServerRef} = Res,
     ?assertEqual(ok, tfsp_server:stop(ServerRef)).
@@ -57,7 +63,7 @@ test_channel() ->
 test_subsystem() ->
     {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
-    Res = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
+    Res = ssh_connection:subsystem(ConnRef, ChanId, tfsp_ssh_server:subsystem_name(), ?SSH_TIMEOUT),
     ?assertEqual(success, Res),
     ?assertEqual(ok, ssh_connection:close(ConnRef, ChanId)),
     ?assertEqual(ok, ssh:close(ConnRef)).
@@ -65,7 +71,7 @@ test_subsystem() ->
 test_client_send() ->
     {ok, ConnRef} = ssh:connect(?SSH_HOST, ?SSH_PORT, ?SSH_CLIENT_OPTS, ?SSH_TIMEOUT),
     {ok, ChanId} = ssh_connection:session_channel(ConnRef, 32768, 65536, ?SSH_TIMEOUT),
-    success = ssh_connection:subsystem(ConnRef, ChanId, "tfsp_ssh_server", ?SSH_TIMEOUT),
+    success = ssh_connection:subsystem(ConnRef, ChanId, tfsp_ssh_server:subsystem_name(), ?SSH_TIMEOUT),
     ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"FOO">>, ?SSH_TIMEOUT)),
     ?assertEqual(ok, ssh_connection:send(ConnRef, ChanId, <<"BAR">>, ?SSH_TIMEOUT)),
     ?assertEqual(ok, ssh_connection:send_eof(ConnRef, ChanId)),
@@ -79,9 +85,12 @@ app_setup() ->
     {ok, _} = application:ensure_all_started(ssh).
 
 setup() ->
+    EvMgrRef = event_queue:start_link(),
     EntTab = fs_ent_tab:create(),
     Root = path:normalize_root(?SSH_SERVER_ROOT),
-    FsCtx = #fs_ctx{ ent_tab = EntTab, root = Root },
+    FsCtx = #fs_ctx{ ev_mgr_ref = EvMgrRef,
+                     ent_tab    = EntTab,
+                     root       = Root },
     {ok, ServerRef} = tfsp_server:start_link_ssh(FsCtx,
                                                  ?SSH_PORT,
                                                  ?SSH_SERVER_SYSTEM_DIR,

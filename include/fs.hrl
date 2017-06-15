@@ -24,7 +24,7 @@
 
 %% File system context for each sync handler.
 -record(fs_ctx, { ev_mgr_ref    :: pid(), % event manager pid
-                  root      :: fs_path(),
-                  ent_tab   :: fs_ent_tab() }).
+                  root          :: fs_path(),
+                  ent_tab       :: fs_ent_tab() }).
 
 -type fs_ctx() :: #fs_ctx{}.

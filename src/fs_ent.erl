@@ -58,7 +58,7 @@ build_directory_ent(_Root, Path, Access, Mtime) ->
                   deleted   = false }}.
 
 build_sha256(Root, Path) ->
-    {ok, IoDevice} = path:open(Root, Path, [read, raw]),
+    {ok, IoDevice} = path:open(Root, Path, [read, raw, binary]),
     Sha256 = build_sha256_from_fd(IoDevice, crypto:hash_init(sha256)),
     ok = file:close(IoDevice),
     Sha256.

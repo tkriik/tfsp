@@ -35,6 +35,7 @@ client_event_test(#fixture_st { ev_mgr_ref = EvMgrRef }) ->
 %% Fixtures
 
 setup() ->
+    {ok, _} = application:ensure_all_started(ssh),
     {ok, EvMgrRef} = event_queue:start_link(),
 
     ServerFsCtx = #fs_ctx{ root = path:normalize_root(?SSH_SERVER_ROOT) },

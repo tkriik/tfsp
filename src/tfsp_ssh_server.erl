@@ -1,66 +1,80 @@
-%%% tfsp SSH server module, handles connection data buffering
-%%% and communicating incoming and outgoing data to/from other
-%%% handler processes.
+%%%-------------------------------------------------------------------
+%%% tfsp SSH server module
+%%%
+%%% Implements SSH channel daemon callbacks for handling data buffering
+%%% and message passing on one end of a tfsp connection.
+%%%-------------------------------------------------------------------
+
 -module(tfsp_ssh_server).
+
 -behaviour(ssh_daemon_channel).
 
+%% API
 -export([start_daemon/4,
-         stop_daemon/1]).
+         stop_daemon/1,
+         subsystem_name/0]).
 
+%% SSH daemon channel callbacks
 -export([init/1,
-         handle_ssh_msg/2,
          handle_msg/2,
+         handle_ssh_msg/2,
          terminate/2]).
 
--include("conn.hrl").
--include("fs.hrl").
+%%% Records
 
+-record(tfsp_ssh_server_state, { root           :: string(),
+                                 sync_options   :: [term()] }).
 
-%% Specs
+%%% Specs
 
--spec start_daemon(fs_ctx(),
-                   non_neg_integer(),
-                   fs_path(),
-                   fs_path()) -> {ok, ssh:ssh_daemon_ref()} | {error, atom()}.
--spec stop_daemon(ssh:ssh_daemon_ref()) -> ok.
+-type tfsp_ssh_server_state() :: #tfsp_ssh_server_state{}.
 
+-spec start_daemon(Root         :: string(),
+                   Port         :: non_neg_integer(),
+                   SshOptions   :: [term()],
+                   SyncOptions  :: [term()]) ->
+    {ok, DaemonRef :: ssh:ssh_daemon_ref()} | {error, Reason :: term()}.
 
-%% API
+-spec stop_daemon(DaemonRef :: ssh:ssh_daemon_ref()) -> ok | {error, Reason :: term()}.
 
-start_daemon(FsCtx, Port, SystemDir, UserDir) ->
-    SubsystemSpec = {"tfsp_ssh_server", {tfsp_ssh_server, [FsCtx]}},
-    SshOpts = [{subsystems, [SubsystemSpec]},
-               {ssh_cli, no_cli},
-               {system_dir, SystemDir},
-               {user_dir, UserDir},
-               {auth_methods, "publickey"}],
-    ssh:daemon(Port, SshOpts).
+-spec init(Args :: [term()]) -> {ok, tfsp_ssh_server_state()}.
+
+%%% API
+
+start_daemon(Root, Port, SshOptions, SyncOptions) ->
+    Subsystem = {subsystem_name(), {?MODULE, [Root, SyncOptions]}},
+    AdditionalSshOptions = [{subsystems, [Subsystem]},
+                            {ssh_cli, no_cli}],
+    NewSshOptions = lists:append(AdditionalSshOptions, SshOptions),
+    ssh:daemon(Port, NewSshOptions).
 
 stop_daemon(DaemonRef) ->
     ssh:stop_daemon(DaemonRef).
 
+subsystem_name() ->
+    "tfsp".
 
-%% SSH daemon channel allbacks
+%%% SSH daemon channel callbacks
 
-init([_FsCtx]) ->
-    St = #conn_st{ buffer = <<>> },
-    {ok, St}.
+init([Root, SyncOptions]) ->
+    State = #tfsp_ssh_server_state{ root            = Root,
+                                    sync_options    = SyncOptions },
+    {ok, State}.
 
-handle_msg(_Msg, St) ->
-    {ok, St}.
+handle_msg({ssh_channel_up, _ChanId, _ConnRef}, #tfsp_ssh_server_state{ root = Root } = State) ->
+    lager:info("~s: SSH server channel up", [Root]),
+    {ok, State};
+handle_msg(Message, State) ->
+    lager:warning("Unhandled message: ~p", [Message]),
+    {ok, State}.
 
-% Got data from channel, append to channel state buffer.
-handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}},
-               #conn_st { buffer = Buffer } = St) ->
-    _Buffer = <<Buffer/binary, Data/binary>>,
-    _St = St#conn_st{ buffer = _Buffer },
-    {ok, _St};
-%% Got EOF from channel, flush channel state buffer.
-handle_ssh_msg({ssh_cm, _ConnRef, {eof, _ChanId}}, St) ->
-    _St = St#conn_st{ buffer = <<>> },
-    {ok, _St};
-handle_ssh_msg(_Msg, St) ->
-    {ok, St}.
+handle_ssh_msg({ssh_cm, _ConnRef, {data, _ChanId, 0, Data}}, State) ->
+    lager:debug("Received ~p bytes from server", [erlang:byte_size(Data)]),
+    {ok, State};
+handle_ssh_msg(Message, State) ->
+    lager:warning("Unhandled SSH message: ~p", [Message]),
+    {ok, State}.
 
-terminate(_Reason, _St) ->
+terminate(Reason, _State) ->
+    lager:warning("Unhandled termination: ~p", [Reason]),
     ok.

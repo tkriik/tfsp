@@ -1,81 +1,94 @@
+%%%-------------------------------------------------------------------
+%%% tfsp server process module
+%%%
+%%% Maintains a reference to an active listener process.
+%%% Does not handle any calls or casts.
+%%%-------------------------------------------------------------------
+
 -module(tfsp_server).
+
 -behaviour(gen_server).
 
--export([start_link_ssh/4,
+%% API
+-export([start_link/3,
          stop/1]).
 
+%% gen_server callbacks
 -export([init/1,
-         terminate/2,
          handle_call/3,
          handle_cast/2,
          handle_info/2,
+         terminate/2,
          code_change/3]).
 
--include("fs.hrl").
+%%% Constants
+
+-define(SERVER_NAME, ?MODULE).
 
 
-%% Specs
+%%% Records
 
--record(ssh_init_args, { fs_ctx     :: fs_ctx(),
-                         port       :: non_neg_integer(),
-                         system_dir :: fs_path(),
-                         user_dir   :: fs_path() }).
+-record(tfsp_server_state, { root               :: string(),
+                             serve_transport    :: tuple(),
+                             sync_options       :: [term()],
+                             conn_handler_ref   :: pid() | any() }).
 
--type ssh_init_args() :: #ssh_init_args{}.
--type init_args() :: ssh_init_args().
+%%% Specs
 
--record(ssh_server_st, { daemon_ref :: ssh:ssh_daemon_ref() }).
+-type tfsp_server_state() :: #tfsp_server_state{}.
 
--type ssh_server_st() :: #ssh_server_st{}.
--type server_st() :: ssh_server_st().
+-spec start_link(Root :: string(), ServeTransport :: tuple(), SyncOptions :: [term()]) -> {ok, ServerRef :: pid()}.
+-spec stop(ServerRef :: pid()) -> ok.
 
--spec start_link_ssh(fs_ctx(),
-                     non_neg_integer(),
-                     fs_path(),
-                     fs_path()) -> {ok, pid()} | {error, term()}.
--spec stop(pid()) -> ok.
+-spec init([term()]) -> {ok, State :: tfsp_server_state()}.
 
--spec init(init_args()) -> {ok, server_st()} | {stop, term()}.
+%%% API
 
-
-%% API
-
-start_link_ssh(FsCtx, Port, SystemDir, UserDir) ->
-    SshInitArgs = #ssh_init_args{ fs_ctx        = FsCtx,
-                                  port          = Port,
-                                  system_dir    = SystemDir,
-                                  user_dir      = UserDir },
-    gen_server:start_link({local, ?MODULE}, ?MODULE, SshInitArgs, []).
+%% Starts and links to tfsp server process with given root path,
+%% serve transport and sync options.
+start_link(Root, ServeTransport, SyncOptions) ->
+    gen_server:start_link(?SERVER_NAME, [Root, ServeTransport, SyncOptions], []).
 
 stop(ServerRef) ->
     gen_server:stop(ServerRef).
 
+%%% gen_server callbacks
 
-%% SSH-specific gen_server callbacks
+init([Root, ServeTransport, SyncOptions]) ->
+    process_flag(trap_exit, true),
+    State = #tfsp_server_state{ root            = Root,
+                                serve_transport = ServeTransport,
+                                sync_options    = SyncOptions },
+    _State = case ServeTransport of
+                 {ssh, Port, SshOptions} ->
+                     case tfsp_ssh_server:start_daemon(Root, Port, SshOptions, SyncOptions) of
+                         {ok, DaemonRef} ->
+                             lager:info("~s: SSH server started on port ~p", [Root, Port]),
+                             State#tfsp_server_state{ conn_handler_ref = DaemonRef };
+                         {error, Reason} ->
+                             lager:error("~s: Failed to start SSH server on port ~p: ~p",
+                                         [Root, Port, Reason]),
+                             {stop, {tfsp_ssh_server_failed, Reason}}
+                     end
+             end,
+    {ok, _State}.
 
-init(#ssh_init_args{ fs_ctx     = FsCtx,
-                     port       = Port,
-                     system_dir = SystemDir,
-                     user_dir   = UserDir }) ->
-    case tfsp_ssh_server:start_daemon(FsCtx, Port, SystemDir, UserDir) of
-        {ok, DaemonRef} ->
-            SshServerSt = #ssh_server_st{ daemon_ref = DaemonRef },
-            {ok, SshServerSt};
-        {error, Reason} ->
-            {stop, Reason}
-    end.
+handle_call(Request, From, State) ->
+    lager:warning("Unhandled call from ~p: ~p", [From, Request]),
+    {noreply, State}.
 
-terminate(_Reason, #ssh_server_st{ daemon_ref = DaemonRef }) ->
-    ok = ssh:stop_daemon(DaemonRef).
+handle_cast(Request, State) ->
+    lager:warning("Unhandled cast: ~p", [Request]),
+    {noreply, State}.
 
-handle_call(_Request, _From, #ssh_server_st{} = St) ->
-    {noreply, St}.
+handle_info(Info, State) ->
+    lager:warning("Unhandled info: ~p", [Info]),
+    {noreply, State}.
 
-handle_cast(_Request, #ssh_server_st{} = St) ->
-    {noreply, St}.
+terminate(Reason, _State) ->
+    % TODO: close daemon
+    lager:warning("Unhandled termination: ~p", [Reason]),
+    ok.
 
-handle_info(_Info, #ssh_server_st{} = St) ->
-    {noreply, St}.
-
-code_change(_OldVsn, #ssh_server_st{} = St, _Extra) ->
-    {ok, St}.
+code_change(_OldVsn, State, _Extra) ->
+    {ok, State}.

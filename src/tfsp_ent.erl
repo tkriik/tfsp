@@ -8,7 +8,13 @@
 -module(tfsp_ent).
 
 %% API
--export([build/2]).
+-export([build/2,
+         build_maybe/3,
+         type/1,
+         mod_time/1,
+         path_pos/0]).
+
+-export_type([tfsp_ent/0]).
 
 -include_lib("kernel/include/file.hrl").
 
@@ -32,9 +38,14 @@
 
 %%% Specs
 
+-type tfsp_path() :: tfsp_file:path().
 -type tfsp_ent() :: #tfsp_ent{}.
 
--spec build(Root :: binary(), Path :: binary()) -> {ok, Entity :: tfsp_ent()} | {error, Reason :: term()}.
+-spec build(Root :: tfsp_path(), Path :: tfsp_path()) -> {ok, Ent :: tfsp_ent()} | {error, Reason :: term()}.
+-spec build_maybe(Root      :: tfsp_path(),
+                  Path      :: tfsp_path(),
+                  ModTime   :: non_neg_integer()) ->
+    {ok, Ent :: tfsp_ent()} | none | {error, Reason :: term()}.
 
 %%% API
 
@@ -48,6 +59,30 @@ build(Root, Path) ->
             {error, Reason}
     end.
 
+%% Builds a new file system entity if the
+%% given modification time is older than
+%% actual time.
+build_maybe(Root, Path, ModTime) ->
+    case tfsp_file:read_link_info(Root, Path) of
+        {ok, FileInfo} ->
+            case ModTime < FileInfo#file_info.mtime of
+                true ->
+                    build(Root, Path, FileInfo);
+                false ->
+                    none
+            end;
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+type(#tfsp_ent{ type = Type }) ->
+    Type.
+
+mod_time(#tfsp_ent{ mod_time = ModTime }) ->
+    ModTime.
+
+path_pos() ->
+    #tfsp_ent.path.
 
 %%% Utilities
 

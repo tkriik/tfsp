@@ -11,7 +11,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/2,
+-export([start_link/3,
          scan/1]).
 
 %% gen_server callbacks
@@ -22,19 +22,27 @@
          terminate/2,
          code_change/3]).
 
-%-include_lib("kernel/include/file.hrl").
+-include_lib("kernel/include/file.hrl").
 
 %%% Records
 
--record(tfsp_scanner_state, { root          :: string(),
+-record(tfsp_scanner_state, { root          :: tfsp_path(),
+                              ent_tab_ref   :: tfsp_ent_tab_ref(),
                               scan_interval :: non_neg_integer() }).
 
 %%% Specs
 
+-type tfsp_path() :: tfsp_file:path().
+-type tfsp_ent_tab_ref() :: tfsp_ent_tab:tfsp_ent_tab_ref().
 -type tfsp_scanner_state() :: #tfsp_scanner_state{}.
 
--spec start_link(Root :: string(), ScanInterval :: non_neg_integer()) -> {ok, ServerRef :: pid()}.
+-spec start_link(Root           :: tfsp_path(),
+                 EntTabRef      :: tfsp_ent_tab_ref(),
+                 ScanInterval   :: non_neg_integer()) ->
+    {ok, ServerRef :: pid()}.
 -spec start_scan(ServerRef :: pid()) -> NumScanned :: non_neg_integer().
+-spec start_single_scan(ServerRef :: pid(), Path :: tfsp_path()) -> NumScanned :: non_neg_integer().
+-spec start_dir_scan(ServerRef :: pid(), Path :: tfsp_path()) -> NumScanned :: non_neg_integer().
 
 -spec init(Args :: [term()]) -> {ok, tfsp_scanner_state()}.
 
@@ -42,19 +50,28 @@
 
 %% Spawns and links to a new scanner server with given root path
 %% and scan interval.
-start_link(Root, ScanInterval) ->
-    gen_server:start_link(?MODULE, [Root, ScanInterval], []).
+start_link(Root, EntTabRef, ScanInterval) ->
+    gen_server:start_link(?MODULE, [Root, EntTabRef, ScanInterval], []).
 
-%% Casts a scan launch message to scanner server.
+%% Casts a total scan launch message to scanner server.
 start_scan(ServerRef) ->
     gen_server:cast(ServerRef, scan).
 
+%% Casts a scan launch message for a single file to a scanner server.
+start_single_scan(ServerRef, Path) ->
+    gen_server:cast(ServerRef, {scan, Path}).
+
+%% Commands a scanner server to scan all files under a directory.
+start_dir_scan(ServerRef, Path) ->
+    gen_server:cast(ServerRef, {scan_dir, Path}).
+
 %%% gen_server callbacks
 
-init([Root, ScanInterval]) ->
+init([Root, EntTabRef, ScanInterval]) ->
     process_flag(trap_exit, true),
     start_scan(self()), % launch initial scan
     State = #tfsp_scanner_state{ root           = Root,
+                                 ent_tab_ref    = EntTabRef,
                                  scan_interval  = ScanInterval },
     {ok, State}.
 
@@ -65,10 +82,61 @@ handle_call(Request, From, State) ->
 handle_cast(scan, #tfsp_scanner_state{ root            = Root,
                                        scan_interval   = ScanInterval } = State) ->
     % Defer next scan message
-    {ok, _TRef} = timer:apply_after(ScanInterval * 1000, ?MODULE, scan, [self()]),
+    defer_start_scan(ScanInterval),
     lager:debug("Scanning modifications on ~s", [Root]),
-    _NumScanned = scan(Root),
-    % TODO: scan
+    start_dir_scan(self(), <<"">>),
+    {noreply, State};
+handle_cast({scan, Path}, #tfsp_scanner_state{ root         = Root,
+                                               ent_tab_ref  = EntTabRef } = State) ->
+    lager:debug("~s: scanning ~s", [Root, Path]),
+    case tfsp_ent_tab:lookup(EntTabRef, Path) of
+        {ok, Ent} ->
+            ModTime = tfsp_ent:mod_time(Ent),
+            % Only rebuild if stored entity has older modification time
+            case tfsp_ent:build_maybe(Root, Path, ModTime) of
+                {ok, NewEnt} ->
+                    ok = tfsp_ent_tab:insert(EntTabRef, NewEnt),
+                    % Launch sub-scans if directory
+                    case tfsp_ent:type(NewEnt) of
+                        directory ->
+                            ok = start_dir_scan(self(), Path);
+                        _ ->
+                            ok
+                    end;
+                {error, Reason} ->
+                    lager:warning("~s: failed to build file system entity at ~s: ~p", [Root, Path, Reason])
+            end;
+        none ->
+            case tfsp_ent:build(Root, Path) of
+                {ok, Ent} ->
+                    ok = tfsp_ent_tab:insert(EntTabRef, Ent),
+                    % Launch sub-scans if directory
+                    case tfsp_ent:type(Ent) of
+                        directory ->
+                            ok = start_dir_scan(self(), Path);
+                        _ ->
+                            ok
+                    end;
+                {error, Reason} ->
+                    lager:warning("~s: failed to build file system entity at \"~s\": ~p", [Root, Path, Reason])
+            end
+    end,
+    {noreply, State};
+handle_cast({scan_dir, Path}, #tfsp_scanner_state{ root = Root } = State) ->
+    case tfsp_file:list_dir(Root, Path) of
+        {ok, Filenames} ->
+            lists:map(fun(Filename) ->
+                              _Filename = tfsp_file:normalize_path(Filename),
+                              % prevent joining with empty prefix from creating absolute path
+                              FullPath = case Path of 
+                                             <<"">> -> _Filename;
+                                             Dir    -> filename:join(Dir, _Filename)
+                                         end,
+                              start_single_scan(self(), FullPath)
+                      end, Filenames);
+        {error, Reason} ->
+            lager:warning("~s: failed to list directory at \"~s\": ~p", [Root, Path, Reason])
+    end,
     {noreply, State};
 handle_cast(Request, State) ->
     lager:warning("Unhandled cast: ~p", [Request]),
@@ -86,6 +154,10 @@ code_change(_OldVsn, State, _Extra) ->
     {ok, State}.
 
 %%% Utilities
+
+defer_start_scan(ScanInterval) ->
+    {ok, _TRef} = timer:apply_after(ScanInterval * 1000, ?MODULE, scan, [self()]),
+    ok.
 
 scan(_Root) ->
     % TODO: implement

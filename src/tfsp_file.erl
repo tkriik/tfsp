@@ -14,6 +14,7 @@
          is_path_normalized/1,
          read_link_info/2,
          write_file_info/3,
+         list_dir/1,
          list_dir/2,
          open/3]).
 
@@ -62,12 +63,15 @@ read_link_info(Root, Path) ->
 write_file_info(Root, Path, FileInfo) ->
     file:write_file_info(join(Root, Path), FileInfo, [{time, posix}]).
 
+list_dir(Root) ->
+    ok = ensure_normalized_root(Root),
+    file:list_dir(Root).
+
 list_dir(Root, Path) ->
     file:list_dir(join(Root, Path)).
 
 open(Root, Path, Modes) ->
     file:open(join(Root, Path), Modes).
-
 
 %%% Utilities
 

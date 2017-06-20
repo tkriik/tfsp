@@ -10,7 +10,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/3,
+-export([start_link/4,
          start_connect/1,
          stop/1]).
 
@@ -36,9 +36,12 @@
 
 %%% Specs
 
+-type tfsp_path() :: tfsp_file:path().
+-type tfsp_ent_tab_ref() :: tfsp_ent_tab:tfsp_ent_tab_ref().
 -type tfsp_client_state() :: #tfsp_client_state{}.
 
--spec start_link(Root               :: string(),
+-spec start_link(Root               :: tfsp_path(),
+                 EntTabRef          :: tfsp_ent_tab_ref(),
                  ConnectTransport   :: tuple(),
                  SyncOptions        :: [term()]) ->
     {ok, ClientRef :: pid()}.
@@ -50,7 +53,7 @@
 
 %% Starts and links to tfsp client process with given root path,
 %% connect transport and sync options.
-start_link(Root, ConnectTransport, SyncOptions) ->
+start_link(Root, EntTabRef, ConnectTransport, SyncOptions) ->
     gen_server:start_link(?SERVER_NAME, [Root, ConnectTransport, SyncOptions], []).
 
 %% Casts a connect command message to a client, used by itself.

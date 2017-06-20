@@ -40,7 +40,7 @@ start(normal, []) ->
     ConfigPath = get_config_path(),
     start(normal, [ConfigPath]);
 start(normal, [ConfigPath]) ->
-    %lager:set_loglevel(lager_console_backend, debug),
+    lager:set_loglevel(lager_console_backend, debug),
     Specs = tfsp_config:read(ConfigPath),
     tfsp_sup:start_link(Specs).
 

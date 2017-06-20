@@ -10,7 +10,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/3,
+-export([start_link/4,
          stop/1]).
 
 %% gen_server callbacks
@@ -35,9 +35,15 @@
 
 %%% Specs
 
+-type tfsp_path() :: tfsp_file:path().
+-type tfsp_ent_tab_ref() :: tfsp_ent_tab:tfsp_ent_tab_ref().
 -type tfsp_server_state() :: #tfsp_server_state{}.
 
--spec start_link(Root :: string(), ServeTransport :: tuple(), SyncOptions :: [term()]) -> {ok, ServerRef :: pid()}.
+-spec start_link(Root           :: tfsp_path(), 
+                 EntTabRef      :: tfsp_ent_tab_ref(),
+                 ServeTransport :: tuple(),
+                 SyncOptions    :: [term()]) ->
+    {ok, ServerRef :: pid()}.
 -spec stop(ServerRef :: pid()) -> ok.
 
 -spec init([term()]) -> {ok, State :: tfsp_server_state()}.
@@ -46,7 +52,7 @@
 
 %% Starts and links to tfsp server process with given root path,
 %% serve transport and sync options.
-start_link(Root, ServeTransport, SyncOptions) ->
+start_link(Root, EntTabRef, ServeTransport, SyncOptions) ->
     gen_server:start_link(?SERVER_NAME, [Root, ServeTransport, SyncOptions], []).
 
 stop(ServerRef) ->

@@ -83,12 +83,11 @@ handle_cast(scan, #tfsp_scanner_state{ root            = Root,
                                        scan_interval   = ScanInterval } = State) ->
     % Defer next scan message
     defer_start_scan(ScanInterval),
-    lager:debug("Scanning modifications on ~s", [Root]),
     start_dir_scan(self(), <<"">>),
     {noreply, State};
 handle_cast({scan, Path}, #tfsp_scanner_state{ root         = Root,
                                                ent_tab_ref  = EntTabRef } = State) ->
-    lager:debug("~s: scanning ~s", [Root, Path]),
+    lager:debug("~s: Scanning ~s", [Root, Path]),
     case tfsp_ent_tab:lookup(EntTabRef, Path) of
         {ok, Ent} ->
             ModTime = tfsp_ent:mod_time(Ent),
@@ -104,7 +103,7 @@ handle_cast({scan, Path}, #tfsp_scanner_state{ root         = Root,
                             ok
                     end;
                 {error, Reason} ->
-                    lager:warning("~s: failed to build file system entity at ~s: ~p", [Root, Path, Reason])
+                    lager:warning("~s: Failed to build file system entity at ~s: ~p", [Root, Path, Reason])
             end;
         none ->
             case tfsp_ent:build(Root, Path) of
@@ -118,7 +117,7 @@ handle_cast({scan, Path}, #tfsp_scanner_state{ root         = Root,
                             ok
                     end;
                 {error, Reason} ->
-                    lager:warning("~s: failed to build file system entity at \"~s\": ~p", [Root, Path, Reason])
+                    lager:warning("~s: Failed to build file system entity at \"~s\": ~p", [Root, Path, Reason])
             end
     end,
     {noreply, State};
@@ -135,7 +134,7 @@ handle_cast({scan_dir, Path}, #tfsp_scanner_state{ root = Root } = State) ->
                               start_single_scan(self(), FullPath)
                       end, Filenames);
         {error, Reason} ->
-            lager:warning("~s: failed to list directory at \"~s\": ~p", [Root, Path, Reason])
+            lager:warning("~s: Failed to list directory at \"~s\": ~p", [Root, Path, Reason])
     end,
     {noreply, State};
 handle_cast(Request, State) ->

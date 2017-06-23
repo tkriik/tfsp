@@ -52,7 +52,7 @@ scanner_child_spec(Root, EntTabRef) ->
     #{ id       => {tfsp_scanner, Root, make_ref()},
        start    => {tfsp_scanner, start_link, [Root, EntTabRef, ?SCAN_INTERVAL]},
        restart  => permanent,
-       shutdown => ?CHILD_TIMEOUT,
+       shutdown => brutal_kill,
        type     => worker }.
 
 %% Transforms a list of synchronization specs to supervisor child specs.
